@@ -161,6 +161,7 @@ export class CompletionBuilder<N extends TmplAstNode|AST> {
     } else if (this.isElementAttributeCompletion()) {
       return this.getElementAttributeCompletionDetails(entryName);
     }
+    return undefined;
   }
 
   /**
@@ -598,6 +599,7 @@ export class CompletionBuilder<N extends TmplAstNode|AST> {
           isNewIdentifierLocation: true,
         };
       }
+      return undefined;
     }
   }
 
@@ -842,7 +844,8 @@ export class CompletionBuilder<N extends TmplAstNode|AST> {
 
   private getPipeCompletions(this: PipeCompletionBuilder):
       ts.WithMetadata<ts.CompletionInfo>|undefined {
-    const pipes = this.templateTypeChecker.getPipesInScope(this.component);
+    const pipes =
+        this.templateTypeChecker.getPotentialPipes(this.component).filter(p => p.isInScope);
     if (pipes === null) {
       return undefined;
     }

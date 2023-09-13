@@ -358,7 +358,7 @@ withEachNg1Version(() => {
                  upgradeRef.dispose();
                });
 
-               Promise.resolve().then(() => this.valueFromPromise = changes['value'].currentValue);
+               queueMicrotask(() => this.valueFromPromise = changes['value'].currentValue);
              }
            }
 
@@ -569,11 +569,11 @@ withEachNg1Version(() => {
              ngOnChanges(changes: SimpleChanges) {
                switch (this.ngOnChangesCount++) {
                  case 0:
-                   expect(changes.model.currentValue).toBe('world');
+                   expect(changes['model'].currentValue).toBe('world');
                    this.modelChange.emit('newC');
                    break;
                  case 1:
-                   expect(changes.model.currentValue).toBe('newC');
+                   expect(changes['model'].currentValue).toBe('newC');
                    break;
                  default:
                    throw new Error('Called too many times! ' + JSON.stringify(changes));
@@ -614,10 +614,8 @@ withEachNg1Version(() => {
            class Ng2Component implements OnChanges {
              ngOnChangesCount = 0;
              firstChangesCount = 0;
-             // TODO(issue/24571): remove '!'.
-             initialValue!: string;
-             // TODO(issue/24571): remove '!'.
-             @Input() foo!: string;
+             @Input() foo: string = '';
+             initialValue: string = this.foo;
 
              ngOnChanges(changes: SimpleChanges) {
                this.ngOnChangesCount++;
@@ -664,7 +662,7 @@ withEachNg1Version(() => {
            const adapter: UpgradeAdapter = new UpgradeAdapter(forwardRef(() => Ng2Module));
            const ng1Module = angular.module_('ng1', []);
 
-           ng1Module.run(($rootScope: any /** TODO #9100 */) => {
+           ng1Module.run(($rootScope: any) => {
              $rootScope.modelA = 'A';
            });
 
@@ -902,8 +900,7 @@ withEachNg1Version(() => {
       it('should correctly project structural directives', waitForAsync(() => {
            @Component({selector: 'ng2', template: 'ng2-{{ itemId }}(<ng-content></ng-content>)'})
            class Ng2Component {
-             // TODO(issue/24571): remove '!'.
-             @Input() itemId!: string;
+             @Input() itemId: string = '';
            }
 
            @NgModule({imports: [BrowserModule], declarations: [Ng2Component]})

@@ -96,8 +96,8 @@ export class SwitchView {
  * ```
  *
  * @publicApi
- * @see `NgSwitchCase`
- * @see `NgSwitchDefault`
+ * @see {@link NgSwitchCase}
+ * @see {@link NgSwitchDefault}
  * @see [Structural Directives](guide/structural-directives)
  *
  */
@@ -106,8 +106,7 @@ export class SwitchView {
   standalone: true,
 })
 export class NgSwitch {
-  // TODO(issue/24571): remove '!'.
-  private _defaultViews!: SwitchView[];
+  private _defaultViews: SwitchView[] = [];
   private _defaultUsed = false;
   private _caseCount = 0;
   private _lastCaseCheckIndex = 0;
@@ -129,9 +128,6 @@ export class NgSwitch {
 
   /** @internal */
   _addDefault(view: SwitchView) {
-    if (!this._defaultViews) {
-      this._defaultViews = [];
-    }
     this._defaultViews.push(view);
   }
 
@@ -149,10 +145,9 @@ export class NgSwitch {
   }
 
   private _updateDefaultCases(useDefault: boolean) {
-    if (this._defaultViews && useDefault !== this._defaultUsed) {
+    if (this._defaultViews.length > 0 && useDefault !== this._defaultUsed) {
       this._defaultUsed = useDefault;
-      for (let i = 0; i < this._defaultViews.length; i++) {
-        const defaultView = this._defaultViews[i];
+      for (const defaultView of this._defaultViews) {
         defaultView.enforceState(useDefault);
       }
     }
@@ -188,8 +183,8 @@ export class NgSwitch {
  * This means that the empty string, `""` matches 0.
  *
  * @publicApi
- * @see `NgSwitch`
- * @see `NgSwitchDefault`
+ * @see {@link NgSwitch}
+ * @see {@link NgSwitchDefault}
  *
  */
 @Directive({
@@ -233,8 +228,8 @@ export class NgSwitchCase implements DoCheck {
  * This statement should be the final case in an `NgSwitch`.
  *
  * @publicApi
- * @see `NgSwitch`
- * @see `NgSwitchCase`
+ * @see {@link NgSwitch}
+ * @see {@link NgSwitchCase}
  *
  */
 @Directive({

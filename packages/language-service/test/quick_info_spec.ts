@@ -7,7 +7,7 @@
  */
 
 import {initMockFileSystem} from '@angular/compiler-cli/src/ngtsc/file_system/testing';
-import * as ts from 'typescript/lib/tsserverlibrary';
+import ts from 'typescript/lib/tsserverlibrary';
 
 import {createModuleAndProjectWithDeclarations, LanguageServiceTestEnv, Project} from '../testing';
 
@@ -289,7 +289,8 @@ describe('quick info', () => {
         expect(toText(documentation))
             .toEqual(
                 'Provides special properties (beyond the regular HTMLElement ' +
-                'interface it also has available to it by inheritance) for manipulating <div> elements.');
+                'interface it also has available to it by inheritance) for manipulating <div> elements.\n\n' +
+                '[MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLDivElement)');
       });
 
       it('should work for directive references', () => {

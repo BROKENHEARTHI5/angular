@@ -6,11 +6,9 @@
  * found in the LICENSE file at https://angular.io/license
  */
 
-import {Location, LocationStrategy} from '@angular/common';
+import {Location, LocationStrategy, ɵnormalizeQueryParams as normalizeQueryParams} from '@angular/common';
 import {EventEmitter, Injectable} from '@angular/core';
 import {SubscriptionLike} from 'rxjs';
-
-import {normalizeQueryParams} from '../../src/location/util';
 
 /**
  * A spy for {@link Location} that allows tests to fire simulated location events.
@@ -25,7 +23,7 @@ export class SpyLocation implements Location {
   /** @internal */
   _subject: EventEmitter<any> = new EventEmitter();
   /** @internal */
-  _baseHref: string = '';
+  _basePath: string = '';
   /** @internal */
   _locationStrategy: LocationStrategy = null!;
   /** @internal */
@@ -33,6 +31,7 @@ export class SpyLocation implements Location {
   /** @internal */
   _urlChangeSubscription: SubscriptionLike|null = null;
 
+  /** @nodoc */
   ngOnDestroy(): void {
     this._urlChangeSubscription?.unsubscribe();
     this._urlChangeListeners = [];
@@ -43,7 +42,7 @@ export class SpyLocation implements Location {
   }
 
   setBaseHref(url: string) {
-    this._baseHref = url;
+    this._basePath = url;
   }
 
   path(): string {
@@ -81,7 +80,7 @@ export class SpyLocation implements Location {
     if (url.length > 0 && !url.startsWith('/')) {
       url = '/' + url;
     }
-    return this._baseHref + url;
+    return this._basePath + url;
   }
 
   go(path: string, query: string = '', state: any = null) {
@@ -103,13 +102,15 @@ export class SpyLocation implements Location {
     path = this.prepareExternalUrl(path);
 
     const history = this._history[this._historyIndex];
+
+    history.state = state;
+
     if (history.path == path && history.query == query) {
       return;
     }
 
     history.path = path;
     history.query = query;
-    history.state = state;
 
     const url = path + (query.length > 0 ? ('?' + query) : '');
     this.urlChanges.push('replace: ' + url);

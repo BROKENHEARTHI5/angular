@@ -84,7 +84,7 @@ The following are some of the key AngularJS built-in directives and their equiva
 
 | AngularJS                                                                                                                                                                                                                                                                                                                                                                                                                                                                     | Angular |
 |:---                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |:---     |
-| <header><code>ng-model</code></header> <code-example hideCopy format="html" language="html"> &lt;input ng-model="vm.favoriteHero" /&gt; </code-example> In AngularJS, the `ng-model` directive binds a form control to a property in the controller associated with the template. This provides **two-way binding** whereby changes result in the value in the view and the model being synchronized. | <header><code>ngModel</code></header> <code-example hideCopy path="ajs-quick-reference/src/app/movie-list.component.html" region="ngModel"></code-example> In Angular, **two-way binding** is indicatedr5t by `[()]`, descriptively referred to as a "banana in a box." This syntax is a shortcut for defining both:<ul><li>property binding, from the component to the view</li><li>event binding, from the view to the component</li></ul> thereby providing two-way binding. <br /> For more information on two-way binding with `ngModel`, see the [Displaying and updating properties with `ngModel`][AioGuideBuiltInDirectivesDisplayingAndUpdatingPropertiesWithNgmodel] section of [Built-in directives][AioGuideBuiltInDirectives]. |
+| <header><code>ng-model</code></header> <code-example hideCopy format="html" language="html"> &lt;input ng-model="vm.favoriteHero" /&gt; </code-example> In AngularJS, the `ng-model` directive binds a form control to a property in the controller associated with the template. This provides **two-way binding** whereby changes result in the value in the view and the model being synchronized. | <header><code>ngModel</code></header> <code-example hideCopy path="ajs-quick-reference/src/app/movie-list.component.html" region="ngModel"></code-example> In Angular, **two-way binding** is indicated by `[()]`, descriptively referred to as a "banana in a box." This syntax is a shortcut for defining both:<ul><li>property binding, from the component to the view</li><li>event binding, from the view to the component</li></ul> thereby providing two-way binding. <br /> For more information on two-way binding with `ngModel`, see the [Displaying and updating properties with `ngModel`][AioGuideBuiltInDirectivesDisplayingAndUpdatingPropertiesWithNgmodel] section of [Built-in directives][AioGuideBuiltInDirectives]. |
 
 ### `ng-repeat` &rarr; `*ngFor`
 
@@ -251,7 +251,7 @@ Now you can also encapsulate a style sheet within a specific component.
 
 [AioGuideNgmodules]: guide/ngmodules "NgModules | Angular"
 
-[AioGuidePipes]: guide/pipes "Transforming Data Using Pipes | Angular"
+[AioGuidePipes]: guide/pipes-overview "Transforming Data Using Pipes | Angular"
 
 [AioGuidePropertyBinding]: guide/property-binding "Property binding | Angular"
 
@@ -267,4 +267,4 @@ Now you can also encapsulate a style sheet within a specific component.
 
 <!-- end links -->
 
-@reviewed 2022-02-28
+@reviewed 2023-08-14

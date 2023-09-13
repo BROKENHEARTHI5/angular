@@ -1,10 +1,13 @@
 import { Component } from '@angular/core';
+import { NgFor } from '@angular/common';
 
 import { CUSTOMERS } from './customers';
 
 @Component({
+  standalone: true,
   selector: 'app-root',
   templateUrl: './app.component.html',
+  imports: [ NgFor ],
   styleUrls: ['./app.component.css']
 })
 export class AppComponent {
@@ -14,10 +17,10 @@ export class AppComponent {
   // #enddocregion customer
 
   title = 'Featured product:';
-  itemImageUrl = '../assets/potted-plant.png';
+  itemImageUrl = '../assets/potted-plant.svg';
 
   recommended = 'You might also like:';
-  itemImageUrl2 = '../assets/lamp.png';
+  itemImageUrl2 = '../assets/lamp.svg';
 
 
 

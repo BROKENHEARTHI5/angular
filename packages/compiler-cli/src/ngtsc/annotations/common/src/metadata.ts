@@ -28,7 +28,7 @@ export function extractClassMetadata(
   if (!reflection.isClass(clazz)) {
     return null;
   }
-  const id = reflection.getAdjacentNameOfClass(clazz);
+  const id = clazz.name;
 
   // Reflect over the class decorators. If none are present, or those that are aren't from
   // Angular, then return null. Otherwise, turn them into metadata.
@@ -164,13 +164,16 @@ function isAngularDecorator(decorator: Decorator, isCore: boolean): boolean {
  * of an AST node, thus removing any references to them. Useful if a particular node has to be
  * taken from one place any emitted to another one exactly as it has been written.
  */
-function removeIdentifierReferences<T extends ts.Node>(node: T, name: string): T {
-  const result = ts.transform(
-      node, [context => root => ts.visitNode(root, function walk(current: ts.Node): ts.Node {
-        return ts.isIdentifier(current) && current.text === name ?
-            ts.factory.createIdentifier(current.text) :
-            ts.visitEachChild(current, walk, context);
-      })]);
+export function removeIdentifierReferences<T extends ts.Node>(
+    node: T, names: string|Set<string>): T {
+  const result =
+      ts.transform(node, [context => root => ts.visitNode(root, function walk(current: ts.Node): T {
+                     return (ts.isIdentifier(current) &&
+                                     (typeof names === 'string' ? current.text === names :
+                                                                  names.has(current.text)) ?
+                                 ts.factory.createIdentifier(current.text) :
+                                 ts.visitEachChild(current, walk, context)) as T;
+                   }) as T]);
 
   return result.transformed[0];
 }

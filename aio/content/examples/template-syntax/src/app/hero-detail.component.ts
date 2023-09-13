@@ -1,9 +1,11 @@
 /* eslint-disable @angular-eslint/no-inputs-metadata-property, @angular-eslint/no-outputs-metadata-property */
 import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { CurrencyPipe, DatePipe } from '@angular/common';
 
 import { Hero } from './hero';
 
 @Component({
+  standalone: true,
   selector: 'app-hero-detail',
   inputs: ['hero'],
   outputs: ['deleteRequest'],
@@ -19,9 +21,9 @@ import { Hero } from './hero';
 })
 export class HeroDetailComponent {
   hero = new Hero(-1, '', 'Zzzzzzzz'); // default sleeping hero
-  // heroImageUrl = 'https://wpclipart.com/cartoon/people/hero/hero_silhoutte_T.png';
+  // heroImageUrl = 'https://wpclipart.com/cartoon/people/hero/hero_silhoutte.png.html';
   // Public Domain terms of use: https://wpclipart.com/terms.html
-  heroImageUrl = 'assets/images/hero.png';
+  heroImageUrl = 'assets/images/hero.svg';
   lineThrough = '';
   @Input() prefix = '';
 
@@ -35,6 +37,7 @@ export class HeroDetailComponent {
 }
 
 @Component({
+  standalone: true,
   selector: 'app-big-hero-detail',
   template: `
   <div class="detail">
@@ -49,6 +52,7 @@ export class HeroDetailComponent {
     <button type="button" (click)="delete()">Delete</button>
   </div>
   `,
+  imports: [CurrencyPipe, DatePipe],
   styles: [`
     .detail { border: 1px solid black; padding: 4px; max-width: 450px; }
     img     { float: left; margin-right: 8px; height: 100px; }

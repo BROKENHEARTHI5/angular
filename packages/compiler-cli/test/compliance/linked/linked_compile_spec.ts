@@ -5,9 +5,10 @@
  * Use of this source code is governed by an MIT-style license that can be
  * found in the LICENSE file at https://angular.io/license
  */
+import babel, {PluginObj} from '@babel/core';
+
 import {needsLinking} from '../../../linker';
 import {createEs2015LinkerPlugin} from '../../../linker/babel';
-import {PluginObj, transformSync} from '../../../linker/babel/src/babel_core';
 import {AbsoluteFsPath, FileSystem} from '../../../src/ngtsc/file_system';
 import {ConsoleLogger, LogLevel} from '../../../src/ngtsc/logging';
 import {MapAndPath, RawSourceMap, SourceFileLoader} from '../../../src/ngtsc/sourcemaps';
@@ -31,7 +32,7 @@ function linkPartials(fileSystem: FileSystem, test: ComplianceTest): CompileResu
   const linkerPlugin = createEs2015LinkerPlugin({
     fileSystem,
     logger,
-    sourceMapping: test.compilerOptions?.sourceMap === true,
+    sourceMapping: test.compilerOptions?.['sourceMap'] === true,
     ...test.angularCompilerOptions
   });
   const goldenPartialPath = fileSystem.resolve('/GOLDEN_PARTIAL.js');
@@ -88,7 +89,7 @@ function applyLinker(
   if (!filename.endsWith('.js') || !needsLinking(filename, source)) {
     return {linkedSource: source, linkedSourceMap: sourceMap};
   }
-  const result = transformSync(source, {
+  const result = babel.transformSync(source, {
     cwd,
     filename,
     sourceMaps: !!sourceMap,

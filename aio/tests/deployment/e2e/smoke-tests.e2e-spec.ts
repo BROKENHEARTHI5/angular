@@ -18,15 +18,13 @@ describe(browser.baseUrl, () => {
       await page.goTo('');
       const text = await page.getDocViewerText();
 
-      expect(text).toContain('modern web');
-      expect(text).toContain('developer\'s platform');
+      expect(text).toContain('deliver web apps');
+      expect(text).toContain('with confidence');
     });
 
     describe('(marketing pages)', () => {
       const textPerUrl: { [key: string]: string } = {
-        features: 'features & benefits',
         docs: 'introduction to the angular docs',
-        events: 'events',
         resources: 'explore angular resources',
       };
 
@@ -44,7 +42,7 @@ describe(browser.baseUrl, () => {
       const textPerUrl: { [key: string]: string } = {
         api: 'api list',
         'guide/architecture': 'architecture',
-        'guide/http': 'httpclient',
+        'guide/understanding-communicating-with-http': 'httpclient',
         'guide/security': 'security',
         tutorial: 'tutorial',
         start: 'getting started',
@@ -60,7 +58,7 @@ describe(browser.baseUrl, () => {
       });
     });
 
-    describe('(api docs pages)', () => {
+    describe('', () => {
       const textPerUrl: { [key: string]: string } = {
         /* Class */ 'api/core/Injector': 'class injector',
         /* Const */ 'api/forms/NG_VALIDATORS': 'const ng_validators',

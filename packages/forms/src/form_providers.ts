@@ -38,7 +38,7 @@ export class FormsModule {
    */
   static withConfig(opts: {
     callSetDisabledState?: SetDisabledStateOption,
-  }): ModuleWithProviders<ReactiveFormsModule> {
+  }): ModuleWithProviders<FormsModule> {
     return {
       ngModule: FormsModule,
       providers: [{
@@ -54,7 +54,6 @@ export class FormsModule {
  * making them available for import by NgModules that import this module.
  *
  * Providers associated with this module:
- * * `FormBuilder`
  * * `RadioControlRegistry`
  *
  * @see [Forms Overview](guide/forms-overview)

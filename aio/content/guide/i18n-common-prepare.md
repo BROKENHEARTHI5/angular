@@ -196,8 +196,8 @@ The following code example shows the value of the [`$localize`][AioApiLocalizeIn
 
 <div class="callout is-helpful">
 
-<header>
-<a name="how-meanings-control-text-extraction-and-merges"></a> How meanings control text extraction and merges
+<header id="how-meanings-control-text-extraction-and-merges">
+How meanings control text extraction and merges
 </header>
 
 The Angular extraction tool generates a translation unit entry for each `i18n` attribute in a template.
@@ -306,9 +306,7 @@ For more information about pluralization categories, see [Choosing plural catego
 
 <div class="callout is-important">
 
-<a name="background-locales-may-not-support-some-pluralization-categories"></a>
-
-<header>Background: Locales may not support some pluralization categories</header>
+<header id="background-locales-may-not-support-some-pluralization-categories">Background: Locales may not support some pluralization categories</header>
 
 Many locales don't support some of the pluralization categories.
 The default locale \(`en-US`\) uses a very simple `plural()` function that doesn't support the `few` pluralization category.
@@ -467,12 +465,12 @@ The following code example shows nested clauses based on the `gender` and `minut
 
 [AioGuideGlossaryInterpolation]: guide/glossary#interpolation "interpolation - Glossary | Angular"
 
-[AioGuideI18nCommonPrepare]: guide/i18n-common-prepare "Prepare templates for translations | Angular"
-[AioGuideI18nCommonPrepareAddHelpfulDescriptionsAndMeanings]: guide/i18n-common-prepare#add-helpful-descriptions-and-meanings "Add helpful descriptions and meanings - Prepare templates for translations | Angular"
+[AioGuideI18nCommonPrepare]: guide/i18n-common-prepare "Prepare component for translation | Angular"
+[AioGuideI18nCommonPrepareAddHelpfulDescriptionsAndMeanings]: guide/i18n-common-prepare#add-helpful-descriptions-and-meanings "Add helpful descriptions and meanings - Prepare component for translation | Angular"
 [AioGuideI18nCommonPrepareMarkAlternatesAndNestedExpressions]: guide/i18n-common-prepare#mark-alternates-and-nested-expressions "Mark alternates and nested expressions - Prepare templates for translation | Angular"
-[AioGuideI18nCommonPrepareMarkElementAttributesForTranslations]: guide/i18n-common-prepare#mark-element-attributes-for-translations "Mark element attributes for translations - Prepare templates for translations | Angular"
+[AioGuideI18nCommonPrepareMarkElementAttributesForTranslations]: guide/i18n-common-prepare#mark-element-attributes-for-translations "Mark element attributes for translations - Prepare component for translation | Angular"
 [AioGuideI18nCommonPrepareMarkPlurals]: guide/i18n-common-prepare#mark-plurals "Mark plurals - Prepare component for translation | Angular"
-[AioGuideI18nCommonPrepareMarkTextInComponentTemplate]: guide/i18n-common-prepare#mark-text-in-component-template "Mark text in component template - Prepare templates for translations | Angular"
+[AioGuideI18nCommonPrepareMarkTextInComponentTemplate]: guide/i18n-common-prepare#mark-text-in-component-template "Mark text in component template - Prepare component for translation | Angular"
 
 [AioGuideI18nCommonTranslationFiles]: guide/i18n-common-translation-files "Work with translation files | Angular"
 

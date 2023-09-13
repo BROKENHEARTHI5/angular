@@ -8,6 +8,7 @@
 
 import {Route} from './models';
 import {ActivatedRouteSnapshot, RouterStateSnapshot} from './router_state';
+import {UrlTree} from './url_tree';
 
 /**
  * Identifies the call or event that triggered a navigation.
@@ -19,6 +20,7 @@ import {ActivatedRouteSnapshot, RouterStateSnapshot} from './router_state';
  * @publicApi
  */
 export type NavigationTrigger = 'imperative'|'popstate'|'hashchange';
+export const IMPERATIVE_NAVIGATION = 'imperative';
 
 /**
  * Identifies the type of a router event.
@@ -42,6 +44,7 @@ export const enum EventType {
   ActivationStart,
   ActivationEnd,
   Scroll,
+  NavigationSkipped,
 }
 
 /**
@@ -56,7 +59,7 @@ export const enum EventType {
  * class MyService {
  *   constructor(public router: Router) {
  *     router.events.pipe(
- *        filter((e: Event): e is RouterEvent => e instanceof RouterEvent)
+ *        filter((e: Event | RouterEvent): e is RouterEvent => e instanceof RouterEvent)
  *     ).subscribe((e: RouterEvent) => {
  *       // Do something
  *     });
@@ -64,7 +67,7 @@ export const enum EventType {
  * }
  * ```
  *
- * @see `Event`
+ * @see {@link Event}
  * @see [Router events summary](guide/router-reference#router-events)
  * @publicApi
  */
@@ -88,9 +91,9 @@ export class NavigationStart extends RouterEvent {
    * Identifies the call or event that triggered the navigation.
    * An `imperative` trigger is a call to `router.navigateByUrl()` or `router.navigate()`.
    *
-   * @see `NavigationEnd`
-   * @see `NavigationCancel`
-   * @see `NavigationError`
+   * @see {@link NavigationEnd}
+   * @see {@link NavigationCancel}
+   * @see {@link NavigationError}
    */
   navigationTrigger?: NavigationTrigger;
 
@@ -136,9 +139,9 @@ export class NavigationStart extends RouterEvent {
 /**
  * An event triggered when a navigation ends successfully.
  *
- * @see `NavigationStart`
- * @see `NavigationCancel`
- * @see `NavigationError`
+ * @see {@link NavigationStart}
+ * @see {@link NavigationCancel}
+ * @see {@link NavigationError}
  *
  * @publicApi
  */
@@ -178,7 +181,7 @@ export const enum NavigationCancellationCode {
    */
   SupersededByNewNavigation,
   /**
-   * A navigation failed because one of the resolvers completed without emiting a value.
+   * A navigation failed because one of the resolvers completed without emitting a value.
    */
   NoDataFromResolver,
   /**
@@ -188,13 +191,33 @@ export const enum NavigationCancellationCode {
 }
 
 /**
+ * A code for the `NavigationSkipped` event of the `Router` to indicate the
+ * reason a navigation was skipped.
+ *
+ * @publicApi
+ */
+export const enum NavigationSkippedCode {
+  /**
+   * A navigation was skipped because the navigation URL was the same as the current Router URL.
+   */
+  IgnoredSameUrlNavigation,
+  /**
+   * A navigation was skipped because the configured `UrlHandlingStrategy` return `false` for both
+   * the current Router URL and the target of the navigation.
+   *
+   * @see {@link UrlHandlingStrategy}
+   */
+  IgnoredByUrlHandlingStrategy,
+}
+
+/**
  * An event triggered when a navigation is canceled, directly or indirectly.
  * This can happen for several reasons including when a route guard
  * returns `false` or initiates a redirect by returning a `UrlTree`.
  *
- * @see `NavigationStart`
- * @see `NavigationEnd`
- * @see `NavigationError`
+ * @see {@link NavigationStart}
+ * @see {@link NavigationEnd}
+ * @see {@link NavigationError}
  *
  * @publicApi
  */
@@ -227,11 +250,42 @@ export class NavigationCancel extends RouterEvent {
 }
 
 /**
+ * An event triggered when a navigation is skipped.
+ * This can happen for a couple reasons including onSameUrlHandling
+ * is set to `ignore` and the navigation URL is not different than the
+ * current state.
+ *
+ * @publicApi
+ */
+export class NavigationSkipped extends RouterEvent {
+  readonly type = EventType.NavigationSkipped;
+
+  constructor(
+      /** @docsNotRequired */
+      id: number,
+      /** @docsNotRequired */
+      url: string,
+      /**
+       * A description of why the navigation was skipped. For debug purposes only. Use `code`
+       * instead for a stable skipped reason that can be used in production.
+       */
+      public reason: string,
+      /**
+       * A code to indicate why the navigation was skipped. This code is stable for
+       * the reason and can be relied on whereas the `reason` string could change and should not be
+       * used in production.
+       */
+      readonly code?: NavigationSkippedCode) {
+    super(id, url);
+  }
+}
+
+/**
  * An event triggered when a navigation fails due to an unexpected error.
  *
- * @see `NavigationStart`
- * @see `NavigationEnd`
- * @see `NavigationCancel`
+ * @see {@link NavigationStart}
+ * @see {@link NavigationEnd}
+ * @see {@link NavigationCancel}
  *
  * @publicApi
  */
@@ -291,7 +345,7 @@ export class RoutesRecognized extends RouterEvent {
 /**
  * An event triggered at the start of the Guard phase of routing.
  *
- * @see `GuardsCheckEnd`
+ * @see {@link GuardsCheckEnd}
  *
  * @publicApi
  */
@@ -319,7 +373,7 @@ export class GuardsCheckStart extends RouterEvent {
 /**
  * An event triggered at the end of the Guard phase of routing.
  *
- * @see `GuardsCheckStart`
+ * @see {@link GuardsCheckStart}
  *
  * @publicApi
  */
@@ -352,7 +406,7 @@ export class GuardsCheckEnd extends RouterEvent {
  * Runs in the "resolve" phase whether or not there is anything to resolve.
  * In future, may change to only run when there are things to be resolved.
  *
- * @see `ResolveEnd`
+ * @see {@link ResolveEnd}
  *
  * @publicApi
  */
@@ -379,7 +433,7 @@ export class ResolveStart extends RouterEvent {
 
 /**
  * An event triggered at the end of the Resolve phase of routing.
- * @see `ResolveStart`.
+ * @see {@link ResolveStart}
  *
  * @publicApi
  */
@@ -407,7 +461,7 @@ export class ResolveEnd extends RouterEvent {
 /**
  * An event triggered before lazy loading a route configuration.
  *
- * @see `RouteConfigLoadEnd`
+ * @see {@link RouteConfigLoadEnd}
  *
  * @publicApi
  */
@@ -425,7 +479,7 @@ export class RouteConfigLoadStart {
 /**
  * An event triggered when a route has been lazy loaded.
  *
- * @see `RouteConfigLoadStart`
+ * @see {@link RouteConfigLoadStart}
  *
  * @publicApi
  */
@@ -443,8 +497,8 @@ export class RouteConfigLoadEnd {
 /**
  * An event triggered at the start of the child-activation
  * part of the Resolve phase of routing.
- * @see  `ChildActivationEnd`
- * @see `ResolveStart`
+ * @see {@link ChildActivationEnd}
+ * @see {@link ResolveStart}
  *
  * @publicApi
  */
@@ -463,8 +517,8 @@ export class ChildActivationStart {
 /**
  * An event triggered at the end of the child-activation part
  * of the Resolve phase of routing.
- * @see `ChildActivationStart`
- * @see `ResolveStart`
+ * @see {@link ChildActivationStart}
+ * @see {@link ResolveStart}
  * @publicApi
  */
 export class ChildActivationEnd {
@@ -482,8 +536,8 @@ export class ChildActivationEnd {
 /**
  * An event triggered at the start of the activation part
  * of the Resolve phase of routing.
- * @see `ActivationEnd`
- * @see `ResolveStart`
+ * @see {@link ActivationEnd}
+ * @see {@link ResolveStart}
  *
  * @publicApi
  */
@@ -502,8 +556,8 @@ export class ActivationStart {
 /**
  * An event triggered at the end of the activation part
  * of the Resolve phase of routing.
- * @see `ActivationStart`
- * @see `ResolveStart`
+ * @see {@link ActivationStart}
+ * @see {@link ResolveStart}
  *
  * @publicApi
  */
@@ -529,7 +583,7 @@ export class Scroll {
 
   constructor(
       /** @docsNotRequired */
-      readonly routerEvent: NavigationEnd,
+      readonly routerEvent: NavigationEnd|NavigationSkipped,
 
       /** @docsNotRequired */
       readonly position: [number, number]|null,
@@ -542,6 +596,12 @@ export class Scroll {
     return `Scroll(anchor: '${this.anchor}', position: '${pos}')`;
   }
 }
+
+export class BeforeActivateRoutes {}
+export class RedirectRequest {
+  constructor(readonly url: UrlTree) {}
+}
+export type PrivateRouterEvents = BeforeActivateRoutes|RedirectRequest;
 
 /**
  * Router events that allow you to track the lifecycle of the router.
@@ -576,16 +636,12 @@ export class Scroll {
  *
  * @publicApi
  */
-export type Event =
-    RouterEvent|NavigationStart|NavigationEnd|NavigationCancel|NavigationError|RoutesRecognized|
+export type Event = NavigationStart|NavigationEnd|NavigationCancel|NavigationError|RoutesRecognized|
     GuardsCheckStart|GuardsCheckEnd|RouteConfigLoadStart|RouteConfigLoadEnd|ChildActivationStart|
-    ChildActivationEnd|ActivationStart|ActivationEnd|Scroll|ResolveStart|ResolveEnd;
-
+    ChildActivationEnd|ActivationStart|ActivationEnd|Scroll|ResolveStart|ResolveEnd|
+    NavigationSkipped;
 
 export function stringifyEvent(routerEvent: Event): string {
-  if (!('type' in routerEvent)) {
-    return `Unknown Router Event: ${routerEvent.constructor.name}`;
-  }
   switch (routerEvent.type) {
     case EventType.ActivationEnd:
       return `ActivationEnd(path: '${routerEvent.snapshot.routeConfig?.path || ''}')`;
@@ -605,6 +661,8 @@ export function stringifyEvent(routerEvent: Event): string {
           routerEvent.state})`;
     case EventType.NavigationCancel:
       return `NavigationCancel(id: ${routerEvent.id}, url: '${routerEvent.url}')`;
+    case EventType.NavigationSkipped:
+      return `NavigationSkipped(id: ${routerEvent.id}, url: '${routerEvent.url}')`;
     case EventType.NavigationEnd:
       return `NavigationEnd(id: ${routerEvent.id}, url: '${routerEvent.url}', urlAfterRedirects: '${
           routerEvent.urlAfterRedirects}')`;

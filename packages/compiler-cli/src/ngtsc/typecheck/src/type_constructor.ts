@@ -42,7 +42,6 @@ export function generateTypeCtorDeclarationFn(
         /* declarationList */ declList);
   } else {
     return ts.factory.createFunctionDeclaration(
-        /* decorators */ undefined,
         /* modifiers */[ts.factory.createModifier(ts.SyntaxKind.DeclareKeyword)],
         /* asteriskToken */ undefined,
         /* name */ meta.fnName,
@@ -111,7 +110,6 @@ export function generateInlineTypeCtor(
 
   // Create the type constructor method declaration.
   return ts.factory.createMethodDeclaration(
-      /* decorators */ undefined,
       /* modifiers */[ts.factory.createModifier(ts.SyntaxKind.StaticKeyword)],
       /* asteriskToken */ undefined,
       /* name */ meta.fnName,
@@ -137,18 +135,22 @@ function constructTypeCtorParameter(
   // In the special case there are no inputs, initType is set to {}.
   let initType: ts.TypeNode|null = null;
 
-  const keys: string[] = meta.fields.inputs;
   const plainKeys: ts.LiteralTypeNode[] = [];
   const coercedKeys: ts.PropertySignature[] = [];
-  for (const key of keys) {
-    if (!meta.coercedInputFields.has(key)) {
-      plainKeys.push(ts.factory.createLiteralTypeNode(ts.factory.createStringLiteral(key)));
+
+  for (const {classPropertyName, transform} of meta.fields.inputs) {
+    if (!meta.coercedInputFields.has(classPropertyName)) {
+      plainKeys.push(
+          ts.factory.createLiteralTypeNode(ts.factory.createStringLiteral(classPropertyName)));
     } else {
       coercedKeys.push(ts.factory.createPropertySignature(
           /* modifiers */ undefined,
-          /* name */ key,
+          /* name */ classPropertyName,
           /* questionToken */ undefined,
-          /* type */ tsCreateTypeQueryForCoercedInput(rawType.typeName, key)));
+          /* type */
+          transform == null ?
+              tsCreateTypeQueryForCoercedInput(rawType.typeName, classPropertyName) :
+              transform.type));
     }
   }
   if (plainKeys.length > 0) {
@@ -173,7 +175,6 @@ function constructTypeCtorParameter(
 
   // Create the 'init' parameter itself.
   return ts.factory.createParameterDeclaration(
-      /* decorators */ undefined,
       /* modifiers */ undefined,
       /* dotDotDotToken */ undefined,
       /* name */ 'init',

@@ -65,7 +65,7 @@ function addBody<T>(
 
  *
  * @usageNotes
- * Sample HTTP requests for the [Tour of Heroes](/tutorial/toh-pt0) application.
+ * Sample HTTP requests for the [Tour of Heroes](/tutorial/tour-of-heroes/toh-pt0) application.
  *
  * ### HTTP Request Example
  *
@@ -102,7 +102,7 @@ function addBody<T>(
  * }
  * ```
  *
- * @see [HTTP Guide](guide/http)
+ * @see [HTTP Guide](guide/understanding-communicating-with-http)
  * @see [HTTP Request](api/common/http/HttpRequest)
  *
  * @publicApi

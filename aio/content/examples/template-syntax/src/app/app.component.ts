@@ -1,4 +1,13 @@
 import { AfterViewInit, Component, ElementRef, OnInit, QueryList, ViewChildren } from '@angular/core';
+import { CommonModule, DatePipe } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+
+import { BigHeroDetailComponent, HeroDetailComponent } from './hero-detail.component';
+import { ClickDirective, ClickDirective2 } from './click.directive';
+import { HeroFormComponent } from './hero-form.component';
+import { heroSwitchComponents } from './hero-switch.components';
+import { SizerComponent } from './sizer.component';
+import { SvgComponent } from './svg.component';
 
 import { Hero } from './hero';
 
@@ -8,8 +17,24 @@ export enum Color {Red, Green, Blue}
  * Giant grab bag of stuff to drive the chapter
  */
 @Component({
+  standalone: true,
   selector: 'app-root',
   templateUrl: './app.component.html',
+  imports: [
+    // Angular Sources
+    CommonModule, FormsModule,
+    DatePipe,
+
+    // Sample Components and Directives
+    BigHeroDetailComponent,
+    ClickDirective,
+    ClickDirective2,
+    HeroDetailComponent,
+    HeroFormComponent,
+    heroSwitchComponents, // an array of components
+    SizerComponent,
+    SvgComponent
+   ],
   styleUrls: [ './app.component.css' ]
 })
 export class AppComponent implements AfterViewInit, OnInit {
@@ -90,14 +115,14 @@ export class AppComponent implements AfterViewInit, OnInit {
 
   heroIdIncrement = 1;
 
-  // heroImageUrl = 'https://wpclipart.com/cartoon/people/hero/hero_silhoutte_T.png';
+  // heroImageUrl = 'https://wpclipart.com/dl.php?img=/cartoon/people/hero/hero_silhoutte.svg';
   // Public Domain terms of use: https://wpclipart.com/terms.html
-  heroImageUrl = 'assets/images/hero.png';
-  // villainImageUrl = 'https://www.clker.com/cliparts/u/s/y/L/x/9/villain-man-hi.png'
+  heroImageUrl = 'assets/images/hero.svg';
+  // villainImageUrl = 'http://www.clker.com/cliparts/u/s/y/L/x/9/villain-man.svg'
   // Public Domain terms of use https://www.clker.com/disclaimer.html
-  villainImageUrl = 'assets/images/villain.png';
+  villainImageUrl = 'assets/images/villain.svg';
 
-  iconUrl = 'assets/images/ng-logo.png';
+  iconUrl = 'assets/images/ng-logo.svg';
   isActive = false;
   isSpecial = true;
   isUnchanged = true;

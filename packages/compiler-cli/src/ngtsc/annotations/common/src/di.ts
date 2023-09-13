@@ -6,11 +6,12 @@
  * found in the LICENSE file at https://angular.io/license
  */
 
-import {Expression, LiteralExpr, R3DependencyMetadata, WrappedNodeExpr} from '@angular/compiler';
+import {Expression, LiteralExpr, R3DependencyMetadata, ReadPropExpr, WrappedNodeExpr} from '@angular/compiler';
 import ts from 'typescript';
 
 import {ErrorCode, FatalDiagnosticError, makeRelatedInformation} from '../../../diagnostics';
-import {ClassDeclaration, CtorParameter, Decorator, ReflectionHost, TypeValueReferenceKind, UnavailableValue, ValueUnavailableKind} from '../../../reflection';
+import {ClassDeclaration, CtorParameter, ReflectionHost, TypeValueReferenceKind, UnavailableValue, ValueUnavailableKind,} from '../../../reflection';
+import {CompilationMode} from '../../../transform';
 
 import {isAngularCore, valueReferenceToExpression} from './util';
 
@@ -28,7 +29,8 @@ export interface ConstructorDepError {
 }
 
 export function getConstructorDependencies(
-    clazz: ClassDeclaration, reflector: ReflectionHost, isCore: boolean): ConstructorDeps|null {
+    clazz: ClassDeclaration, reflector: ReflectionHost, isCore: boolean,
+    compilationMode: CompilationMode): ConstructorDeps|null {
   const deps: R3DependencyMetadata[] = [];
   const errors: ConstructorDepError[] = [];
   let ctorParams = reflector.getConstructorParameters(clazz);
@@ -40,7 +42,37 @@ export function getConstructorDependencies(
     }
   }
   ctorParams.forEach((param, idx) => {
-    let token = valueReferenceToExpression(param.typeValueReference);
+    let token: Expression|null = null;
+
+    if (compilationMode === CompilationMode.LOCAL &&
+        param.typeValueReference.kind === TypeValueReferenceKind.UNAVAILABLE &&
+        param.typeValueReference.reason.kind !== ValueUnavailableKind.MISSING_TYPE) {
+      // The case of local compilation where injection token cannot be resolved because it is
+      // "probably" imported from another file
+
+      const typeNode = param.typeValueReference.reason.typeNode;
+
+      if (ts.isTypeReferenceNode(typeNode)) {
+        if (ts.isIdentifier(typeNode.typeName)) {
+          token = new WrappedNodeExpr(typeNode.typeName);
+        } else if (ts.isQualifiedName(typeNode.typeName)) {
+          const receiver = new WrappedNodeExpr(typeNode.typeName.left);
+
+          // Here we manually create the token out of the typeName without caring about its
+          // references for better TS tracking. This is because in this code path the typeNode is
+          // imported from another file and since we are in local compilation mode (=single file
+          // mode) the reference of this node (or its typeName node) cannot be resolved. So all we
+          // can do is just to create a new expression.
+          token = new ReadPropExpr(receiver, typeNode.typeName.right.getText());
+        } else {
+          throw new Error('Impossible state!');
+        }
+      }
+    } else {
+      // In all other cases resolve the injection token
+      token = valueReferenceToExpression(param.typeValueReference);
+    }
+
     let attributeNameType: Expression|null = null;
     let optional = false, self = false, skipSelf = false, host = false;
 
@@ -49,7 +81,7 @@ export function getConstructorDependencies(
       if (name === 'Inject') {
         if (dec.args === null || dec.args.length !== 1) {
           throw new FatalDiagnosticError(
-              ErrorCode.DECORATOR_ARITY_WRONG, Decorator.nodeForError(dec),
+              ErrorCode.DECORATOR_ARITY_WRONG, dec.node,
               `Unexpected number of arguments to @Inject().`);
         }
         token = new WrappedNodeExpr(dec.args[0]);
@@ -64,7 +96,7 @@ export function getConstructorDependencies(
       } else if (name === 'Attribute') {
         if (dec.args === null || dec.args.length !== 1) {
           throw new FatalDiagnosticError(
-              ErrorCode.DECORATOR_ARITY_WRONG, Decorator.nodeForError(dec),
+              ErrorCode.DECORATOR_ARITY_WRONG, dec.node,
               `Unexpected number of arguments to @Attribute().`);
         }
         const attributeName = dec.args[0];
@@ -77,8 +109,7 @@ export function getConstructorDependencies(
         }
       } else {
         throw new FatalDiagnosticError(
-            ErrorCode.DECORATOR_UNEXPECTED, Decorator.nodeForError(dec),
-            `Unexpected decorator ${name} on parameter.`);
+            ErrorCode.DECORATOR_UNEXPECTED, dec.node, `Unexpected decorator ${name} on parameter.`);
       }
     });
 
@@ -124,10 +155,10 @@ export function unwrapConstructorDependencies(deps: ConstructorDeps|null): R3Dep
 }
 
 export function getValidConstructorDependencies(
-    clazz: ClassDeclaration, reflector: ReflectionHost, isCore: boolean): R3DependencyMetadata[]|
-    null {
+    clazz: ClassDeclaration, reflector: ReflectionHost, isCore: boolean,
+    compilationMode: CompilationMode): R3DependencyMetadata[]|null {
   return validateConstructorDependencies(
-      clazz, getConstructorDependencies(clazz, reflector, isCore));
+      clazz, getConstructorDependencies(clazz, reflector, isCore, compilationMode));
 }
 
 /**
@@ -144,9 +175,8 @@ export function validateConstructorDependencies(
   } else if (deps.deps !== null) {
     return deps.deps;
   } else {
-    // TODO(alxhub): this cast is necessary because the g3 typescript version doesn't narrow here.
     // There is at least one error.
-    const error = (deps as {errors: ConstructorDepError[]}).errors[0];
+    const error = deps.errors[0];
     throw createUnsuitableInjectionTokenError(clazz, error);
   }
 }

@@ -7,7 +7,7 @@
  */
 
 import {SecurityContext} from '../core';
-import {AST, BindingType, BoundElementProperty, ParsedEvent, ParsedEventType} from '../expression_parser/ast';
+import {AST, ASTWithSource, BindingType, BoundElementProperty, ParsedEvent, ParsedEventType} from '../expression_parser/ast';
 import {I18nMeta} from '../i18n/i18n_ast';
 import {ParseSourceSpan} from '../parse_util';
 
@@ -117,6 +117,197 @@ export class Element implements Node {
   }
 }
 
+export abstract class DeferredTrigger implements Node {
+  constructor(public sourceSpan: ParseSourceSpan) {}
+
+  visit<Result>(visitor: Visitor<Result>): Result {
+    return visitor.visitDeferredTrigger(this);
+  }
+}
+
+export class BoundDeferredTrigger extends DeferredTrigger {
+  constructor(public value: AST, sourceSpan: ParseSourceSpan) {
+    super(sourceSpan);
+  }
+}
+
+export class IdleDeferredTrigger extends DeferredTrigger {}
+
+export class ImmediateDeferredTrigger extends DeferredTrigger {}
+
+export class HoverDeferredTrigger extends DeferredTrigger {}
+
+export class TimerDeferredTrigger extends DeferredTrigger {
+  constructor(public delay: number, sourceSpan: ParseSourceSpan) {
+    super(sourceSpan);
+  }
+}
+
+export class InteractionDeferredTrigger extends DeferredTrigger {
+  constructor(public reference: string|null, sourceSpan: ParseSourceSpan) {
+    super(sourceSpan);
+  }
+}
+
+export class ViewportDeferredTrigger extends DeferredTrigger {
+  constructor(public reference: string|null, sourceSpan: ParseSourceSpan) {
+    super(sourceSpan);
+  }
+}
+
+export class DeferredBlockPlaceholder implements Node {
+  constructor(
+      public children: Node[], public minimumTime: number|null, public sourceSpan: ParseSourceSpan,
+      public startSourceSpan: ParseSourceSpan, public endSourceSpan: ParseSourceSpan|null) {}
+
+  visit<Result>(visitor: Visitor<Result>): Result {
+    return visitor.visitDeferredBlockPlaceholder(this);
+  }
+}
+
+export class DeferredBlockLoading implements Node {
+  constructor(
+      public children: Node[], public afterTime: number|null, public minimumTime: number|null,
+      public sourceSpan: ParseSourceSpan, public startSourceSpan: ParseSourceSpan,
+      public endSourceSpan: ParseSourceSpan|null) {}
+
+  visit<Result>(visitor: Visitor<Result>): Result {
+    return visitor.visitDeferredBlockLoading(this);
+  }
+}
+
+export class DeferredBlockError implements Node {
+  constructor(
+      public children: Node[], public sourceSpan: ParseSourceSpan,
+      public startSourceSpan: ParseSourceSpan, public endSourceSpan: ParseSourceSpan|null) {}
+
+  visit<Result>(visitor: Visitor<Result>): Result {
+    return visitor.visitDeferredBlockError(this);
+  }
+}
+
+export interface DeferredBlockTriggers {
+  when?: BoundDeferredTrigger;
+  idle?: IdleDeferredTrigger;
+  immediate?: ImmediateDeferredTrigger;
+  hover?: HoverDeferredTrigger;
+  timer?: TimerDeferredTrigger;
+  interaction?: InteractionDeferredTrigger;
+  viewport?: ViewportDeferredTrigger;
+}
+
+export class DeferredBlock implements Node {
+  readonly triggers: Readonly<DeferredBlockTriggers>;
+  readonly prefetchTriggers: Readonly<DeferredBlockTriggers>;
+  private readonly definedTriggers: (keyof DeferredBlockTriggers)[];
+  private readonly definedPrefetchTriggers: (keyof DeferredBlockTriggers)[];
+
+  constructor(
+      public children: Node[], triggers: DeferredBlockTriggers,
+      prefetchTriggers: DeferredBlockTriggers, public placeholder: DeferredBlockPlaceholder|null,
+      public loading: DeferredBlockLoading|null, public error: DeferredBlockError|null,
+      public sourceSpan: ParseSourceSpan, public startSourceSpan: ParseSourceSpan,
+      public endSourceSpan: ParseSourceSpan|null) {
+    this.triggers = triggers;
+    this.prefetchTriggers = prefetchTriggers;
+    // We cache the keys since we know that they won't change and we
+    // don't want to enumarate them every time we're traversing the AST.
+    this.definedTriggers = Object.keys(triggers) as (keyof DeferredBlockTriggers)[];
+    this.definedPrefetchTriggers = Object.keys(prefetchTriggers) as (keyof DeferredBlockTriggers)[];
+  }
+
+  visit<Result>(visitor: Visitor<Result>): Result {
+    return visitor.visitDeferredBlock(this);
+  }
+
+  visitAll(visitor: Visitor<unknown>): void {
+    this.visitTriggers(this.definedTriggers, this.triggers, visitor);
+    this.visitTriggers(this.definedPrefetchTriggers, this.prefetchTriggers, visitor);
+    visitAll(visitor, this.children);
+    this.placeholder && visitor.visitDeferredBlockPlaceholder(this.placeholder);
+    this.loading && visitor.visitDeferredBlockLoading(this.loading);
+    this.error && visitor.visitDeferredBlockError(this.error);
+  }
+
+  private visitTriggers(
+      keys: (keyof DeferredBlockTriggers)[], triggers: DeferredBlockTriggers, visitor: Visitor) {
+    for (const key of keys) {
+      visitor.visitDeferredTrigger(triggers[key]!);
+    }
+  }
+}
+
+export class SwitchBlock implements Node {
+  constructor(
+      public expression: AST, public cases: SwitchBlockCase[], public sourceSpan: ParseSourceSpan,
+      public startSourceSpan: ParseSourceSpan, public endSourceSpan: ParseSourceSpan|null) {}
+
+  visit<Result>(visitor: Visitor<Result>): Result {
+    return visitor.visitSwitchBlock(this);
+  }
+}
+
+export class SwitchBlockCase implements Node {
+  constructor(
+      public expression: AST|null, public children: Node[], public sourceSpan: ParseSourceSpan,
+      public startSourceSpan: ParseSourceSpan) {}
+
+  visit<Result>(visitor: Visitor<Result>): Result {
+    return visitor.visitSwitchBlockCase(this);
+  }
+}
+
+export interface ForLoopBlockContext {
+  $index?: string;
+  $first?: string;
+  $last?: string;
+  $even?: string;
+  $odd?: string;
+  $count?: string;
+}
+
+export class ForLoopBlock implements Node {
+  constructor(
+      public itemName: string, public expression: ASTWithSource, public trackBy: ASTWithSource,
+      public contextVariables: ForLoopBlockContext|null, public children: Node[],
+      public empty: ForLoopBlockEmpty|null, public sourceSpan: ParseSourceSpan,
+      public startSourceSpan: ParseSourceSpan, public endSourceSpan: ParseSourceSpan|null) {}
+
+  visit<Result>(visitor: Visitor<Result>): Result {
+    return visitor.visitForLoopBlock(this);
+  }
+}
+
+export class ForLoopBlockEmpty implements Node {
+  constructor(
+      public children: Node[], public sourceSpan: ParseSourceSpan,
+      public startSourceSpan: ParseSourceSpan) {}
+
+  visit<Result>(visitor: Visitor<Result>): Result {
+    return visitor.visitForLoopBlockEmpty(this);
+  }
+}
+
+export class IfBlock implements Node {
+  constructor(
+      public branches: IfBlockBranch[], public sourceSpan: ParseSourceSpan,
+      public startSourceSpan: ParseSourceSpan, public endSourceSpan: ParseSourceSpan|null) {}
+
+  visit<Result>(visitor: Visitor<Result>): Result {
+    return visitor.visitIfBlock(this);
+  }
+}
+
+export class IfBlockBranch implements Node {
+  constructor(
+      public expression: AST|null, public children: Node[], public expressionAlias: string|null,
+      public sourceSpan: ParseSourceSpan, public startSourceSpan: ParseSourceSpan) {}
+
+  visit<Result>(visitor: Visitor<Result>): Result {
+    return visitor.visitIfBlockBranch(this);
+  }
+}
+
 export class Template implements Node {
   constructor(
       // tagName is the name of the container element, if applicable.
@@ -196,20 +387,17 @@ export interface Visitor<Result = any> {
   visitText(text: Text): Result;
   visitBoundText(text: BoundText): Result;
   visitIcu(icu: Icu): Result;
-}
-
-export class NullVisitor implements Visitor<void> {
-  visitElement(element: Element): void {}
-  visitTemplate(template: Template): void {}
-  visitContent(content: Content): void {}
-  visitVariable(variable: Variable): void {}
-  visitReference(reference: Reference): void {}
-  visitTextAttribute(attribute: TextAttribute): void {}
-  visitBoundAttribute(attribute: BoundAttribute): void {}
-  visitBoundEvent(attribute: BoundEvent): void {}
-  visitText(text: Text): void {}
-  visitBoundText(text: BoundText): void {}
-  visitIcu(icu: Icu): void {}
+  visitDeferredBlock(deferred: DeferredBlock): Result;
+  visitDeferredBlockPlaceholder(block: DeferredBlockPlaceholder): Result;
+  visitDeferredBlockError(block: DeferredBlockError): Result;
+  visitDeferredBlockLoading(block: DeferredBlockLoading): Result;
+  visitDeferredTrigger(trigger: DeferredTrigger): Result;
+  visitSwitchBlock(block: SwitchBlock): Result;
+  visitSwitchBlockCase(block: SwitchBlockCase): Result;
+  visitForLoopBlock(block: ForLoopBlock): Result;
+  visitForLoopBlockEmpty(block: ForLoopBlockEmpty): Result;
+  visitIfBlock(block: IfBlock): Result;
+  visitIfBlockBranch(block: IfBlockBranch): Result;
 }
 
 export class RecursiveVisitor implements Visitor<void> {
@@ -228,6 +416,37 @@ export class RecursiveVisitor implements Visitor<void> {
     visitAll(this, template.references);
     visitAll(this, template.variables);
   }
+  visitDeferredBlock(deferred: DeferredBlock): void {
+    deferred.visitAll(this);
+  }
+  visitDeferredBlockPlaceholder(block: DeferredBlockPlaceholder): void {
+    visitAll(this, block.children);
+  }
+  visitDeferredBlockError(block: DeferredBlockError): void {
+    visitAll(this, block.children);
+  }
+  visitDeferredBlockLoading(block: DeferredBlockLoading): void {
+    visitAll(this, block.children);
+  }
+  visitSwitchBlock(block: SwitchBlock): void {
+    visitAll(this, block.cases);
+  }
+  visitSwitchBlockCase(block: SwitchBlockCase): void {
+    visitAll(this, block.children);
+  }
+  visitForLoopBlock(block: ForLoopBlock): void {
+    visitAll(this, block.children);
+    block.empty?.visit(this);
+  }
+  visitForLoopBlockEmpty(block: ForLoopBlockEmpty): void {
+    visitAll(this, block.children);
+  }
+  visitIfBlock(block: IfBlock): void {
+    visitAll(this, block.branches);
+  }
+  visitIfBlockBranch(block: IfBlockBranch): void {
+    visitAll(this, block.children);
+  }
   visitContent(content: Content): void {}
   visitVariable(variable: Variable): void {}
   visitReference(reference: Reference): void {}
@@ -237,80 +456,15 @@ export class RecursiveVisitor implements Visitor<void> {
   visitText(text: Text): void {}
   visitBoundText(text: BoundText): void {}
   visitIcu(icu: Icu): void {}
+  visitDeferredTrigger(trigger: DeferredTrigger): void {}
 }
 
-export class TransformVisitor implements Visitor<Node> {
-  visitElement(element: Element): Node {
-    const newAttributes = transformAll(this, element.attributes);
-    const newInputs = transformAll(this, element.inputs);
-    const newOutputs = transformAll(this, element.outputs);
-    const newChildren = transformAll(this, element.children);
-    const newReferences = transformAll(this, element.references);
-    if (newAttributes != element.attributes || newInputs != element.inputs ||
-        newOutputs != element.outputs || newChildren != element.children ||
-        newReferences != element.references) {
-      return new Element(
-          element.name, newAttributes, newInputs, newOutputs, newChildren, newReferences,
-          element.sourceSpan, element.startSourceSpan, element.endSourceSpan);
-    }
-    return element;
-  }
-
-  visitTemplate(template: Template): Node {
-    const newAttributes = transformAll(this, template.attributes);
-    const newInputs = transformAll(this, template.inputs);
-    const newOutputs = transformAll(this, template.outputs);
-    const newTemplateAttrs = transformAll(this, template.templateAttrs);
-    const newChildren = transformAll(this, template.children);
-    const newReferences = transformAll(this, template.references);
-    const newVariables = transformAll(this, template.variables);
-    if (newAttributes != template.attributes || newInputs != template.inputs ||
-        newOutputs != template.outputs || newTemplateAttrs != template.templateAttrs ||
-        newChildren != template.children || newReferences != template.references ||
-        newVariables != template.variables) {
-      return new Template(
-          template.tagName, newAttributes, newInputs, newOutputs, newTemplateAttrs, newChildren,
-          newReferences, newVariables, template.sourceSpan, template.startSourceSpan,
-          template.endSourceSpan);
-    }
-    return template;
-  }
-
-  visitContent(content: Content): Node {
-    return content;
-  }
-
-  visitVariable(variable: Variable): Node {
-    return variable;
-  }
-  visitReference(reference: Reference): Node {
-    return reference;
-  }
-  visitTextAttribute(attribute: TextAttribute): Node {
-    return attribute;
-  }
-  visitBoundAttribute(attribute: BoundAttribute): Node {
-    return attribute;
-  }
-  visitBoundEvent(attribute: BoundEvent): Node {
-    return attribute;
-  }
-  visitText(text: Text): Node {
-    return text;
-  }
-  visitBoundText(text: BoundText): Node {
-    return text;
-  }
-  visitIcu(icu: Icu): Node {
-    return icu;
-  }
-}
 
 export function visitAll<Result>(visitor: Visitor<Result>, nodes: Node[]): Result[] {
   const result: Result[] = [];
   if (visitor.visit) {
     for (const node of nodes) {
-      const newNode = visitor.visit(node) || node.visit(visitor);
+      visitor.visit(node) || node.visit(visitor);
     }
   } else {
     for (const node of nodes) {
@@ -321,18 +475,4 @@ export function visitAll<Result>(visitor: Visitor<Result>, nodes: Node[]): Resul
     }
   }
   return result;
-}
-
-export function transformAll<Result extends Node>(
-    visitor: Visitor<Node>, nodes: Result[]): Result[] {
-  const result: Result[] = [];
-  let changed = false;
-  for (const node of nodes) {
-    const newNode = node.visit(visitor);
-    if (newNode) {
-      result.push(newNode as Result);
-    }
-    changed = changed || newNode != node;
-  }
-  return changed ? result : nodes;
 }

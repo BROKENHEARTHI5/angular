@@ -7,6 +7,7 @@
  */
 /// <reference types="node" />
 
+import {runfiles} from '@bazel/runfiles';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -19,10 +20,10 @@ import * as path from 'path';
 export function getAngularPackagesFromRunfiles() {
   // Path to the Bazel runfiles manifest if present. This file is present if runfiles are
   // not symlinked into the runfiles directory.
-  const runfilesManifestPath = process.env.RUNFILES_MANIFEST_FILE;
+  const runfilesManifestPath = process.env['RUNFILES_MANIFEST_FILE'];
 
   if (!runfilesManifestPath) {
-    const packageRunfilesDir = path.join(process.env.RUNFILES!, 'angular/packages');
+    const packageRunfilesDir = path.join(process.env['RUNFILES']!, 'angular/packages');
 
     return fs.readdirSync(packageRunfilesDir)
         .map(name => ({name, pkgPath: path.join(packageRunfilesDir, name, 'npm_package/')}))
@@ -39,11 +40,7 @@ export function getAngularPackagesFromRunfiles() {
            }));
 }
 
-/**
- * Resolves a NPM package from the Bazel runfiles. We need to resolve the Bazel tree
- * artifacts using a "resolve file" because the NodeJS module resolution does not allow
- * resolving to directory paths.
- */
-export function resolveNpmTreeArtifact(manifestPath: string, resolveFile = 'package.json') {
-  return path.dirname(require.resolve(path.posix.join(manifestPath, resolveFile)));
+/** Resolves a file or directory from the Bazel runfiles. */
+export function resolveFromRunfiles(manifestPath: string) {
+  return runfiles.resolve(manifestPath);
 }

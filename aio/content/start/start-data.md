@@ -115,9 +115,6 @@ For customers to see their cart, you can create the cart view in two steps:
 
     <code-example header="src/app/cart/cart.component.ts" path="getting-started/src/app/cart/cart.component.1.ts"></code-example>
 
-    StackBlitz also generates an `ngOnInit()` by default in components.
-    You can ignore the `CartComponent` `ngOnInit()` for this tutorial.
-
 1.  Notice that the newly created `CartComponent` is added to the module's `declarations` in `app.module.ts`.
 
     <code-example header="src/app/app.module.ts" path="getting-started/src/app/app.module.ts" region="declare-cart"></code-example>
@@ -228,7 +225,7 @@ To get shipping data, from `shipping.json`, You can use the `HttpClient` `get()`
 
     <code-example header="src/app/cart.service.ts" path="getting-started/src/app/cart.service.ts" region="get-shipping"></code-example>
 
-For more information about Angular's `HttpClient`, see the [Client-Server Interaction](guide/http "Server interaction through HTTP") guide.
+For more information about Angular's `HttpClient`, see the [Client-Server Interaction](guide/understanding-communicating-with-http "Server interaction through HTTP") guide.
 
 ## Create a shipping component
 

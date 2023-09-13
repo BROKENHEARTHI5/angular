@@ -15,6 +15,14 @@ ng_module(
     deps = [
         "//packages/core",
         "//packages/platform-browser",
-        "//packages/upgrade/src/common",
+        "//packages/upgrade",
     ],
+)
+
+filegroup(
+    name = "files_for_docgen",
+    srcs = glob([
+        "*.ts",
+        "src/**/*.ts",
+    ]) + ["PACKAGE.md"],
 )

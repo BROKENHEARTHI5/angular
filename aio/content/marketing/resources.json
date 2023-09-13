@@ -1,6 +1,6 @@
 {
   "Community": {
-    "order": 3,
+    "order": 1,
     "subCategories": {
       "Community Curations": {
         "order": 1,
@@ -54,6 +54,11 @@
             "desc": "Come learn technical skills and network at this monthly, multi-series, multi-event, multi-timezone online meetup.",
             "url": "https://angularcommunity.net",
             "title": "Angular Community Meetup"
+          },
+          "This-is-Angular": {
+            "desc": "Inclusive Angular publication free from conflict of interest. This publication is all about sharing Angular knowledge for free and not at all about money or KPIs. Cross-posts are welcome. Part of This is Learning.",
+            "url": "https://dev.to/this-is-angular",
+            "title": "This is Angular"
           }
         }
       },
@@ -107,19 +112,13 @@
             "logo": "",
             "title": "NgRuAir",
             "url": "https://github.com/ngRuAir/ngruair"
-          },
-          "ngxp": {
-            "desc": "Weekly technical-adjacent podcast by Brooke Avery & Erik Slack. Don't just code in Angular, come enjoy the Angular Experience!",
-            "logo": "",
-            "title": "Angular Experience (NgXP)",
-            "url": "https://ngxp.show"
           }
         }
       }
     }
   },
   "Development": {
-    "order": 1,
+    "order": 3,
     "subCategories": {
       "Cross-Platform Development": {
         "order": 5,
@@ -286,6 +285,12 @@
             "logo": "",
             "title": "Compodoc",
             "url": "https://github.com/compodoc/compodoc"
+          },
+          "docgeni": {
+            "desc": "A modern, powerful and out of the box documentation generator for Angular component lib and markdown docs.",
+            "logo": "",
+            "title": "Docgeni",
+            "url": "https://github.com/docgeni/docgeni"
           },
           "angular-playground": {
             "desc": "UI development environment for building, testing, and documenting Angular applications.",
@@ -563,6 +568,11 @@
             "desc": "NGX Cookie Service is an Angular Library that can be used to read, set and delete browser cookies",
             "title": "NGX Cookie Service",
             "url": "https://github.com/stevermeister/ngx-cookie-service"
+          },
+          "flowbite": {
+            "desc": "Open-source UI component library built with the utility-classes from Tailwind CSS and with official support for Angular.",
+            "title": "Flowbite",
+            "url": "https://flowbite.com/docs/getting-started/angular/"
           }
         }
       }
@@ -576,8 +586,8 @@
         "resources": {
           "-KLIzGEp8Mh5W-FkiQnL": {
             "desc": "A no-nonsense beginner's guide to building web applications with Angular and TypeScript",
-            "title": "Learning Angular - Third Edition",
-            "url": "https://www.packtpub.com/product/learning-angular-third-edition/9781839210662"
+            "title": "Learning Angular - Fourth Edition",
+            "url": "https://www.amazon.com/dp/1803240601"
           },
           "3ab": {
             "desc": "More than 15 books from O'Reilly about Angular",
@@ -661,9 +671,9 @@
             "logo": ""
           },
           "angular-projects": {
-            "title": "Angular Projects - Second Edition",
-            "desc": "Build modern web apps by exploring Angular with 10 different projects and cutting-edge technologies",
-            "url": "https://www.packtpub.com/product/angular-projects-second-edition/9781800205260"
+            "title": "Angular Projects - Third Edition",
+            "desc": "Build modern web apps in Angular 16 with 10 different projects and cutting-edge technologies",
+            "url": "https://amazon.com/dp/1803239115"
           },
           "rangle-angular-training-book": {
             "title": "Rangle’s Angular Training Book",
@@ -807,6 +817,11 @@
             "desc": "An online education platform with a complete path in Angular and TypeScript from zero to advanced. Platzi helps students from all over the world acquire new, in-demand skills.",
             "title": "Platzi (Español)",
             "url": "https://platzi.com/angular-io"
+          },
+          "angular-gettin-started": {
+            "desc": "Want to learn #Angular, but not sure where to start? Check out this in-depth “Angular for Beginners Course“ created by Angular #GDE @SantoshYadavDev.",
+            "title": "Angular for Beginners Course",
+            "url": "https://youtu.be/3qBXWUpoPHo"
           }
         }
       },
@@ -923,10 +938,10 @@
             "title": "Angular.Schule (German)",
             "url": "https://angular.schule/"
           },
-          "strbrw": {
+          "simplified": {
             "desc": "Angular and RxJS trainings, Code Reviews and consultancy. We help software engineers all over the world to create better web-applications...",
-            "title": "StrongBrew",
-            "url": "https://strongbrew.io/"
+            "title": "Simplified Courses",
+            "url": "https://simplified.courses/"
           },
           "angular.de": {
             "desc": "Onsite Angular Training delivered by the greatest community in the german speaking area in Germany, Austria and Switzerland. We also regularly post articles and tutorials on our blog.",

@@ -16,7 +16,7 @@ export class BrowserAnimationBuilder extends AnimationBuilder {
   private _nextAnimationId = 0;
   private _renderer: AnimationRenderer;
 
-  constructor(rootRenderer: RendererFactory2, @Inject(DOCUMENT) doc: any) {
+  constructor(rootRenderer: RendererFactory2, @Inject(DOCUMENT) doc: Document) {
     super();
     const typeData =
         {id: '0', encapsulation: ViewEncapsulation.None, styles: [], data: {animation: []}} as
@@ -24,7 +24,7 @@ export class BrowserAnimationBuilder extends AnimationBuilder {
     this._renderer = rootRenderer.createRenderer(doc.body, typeData) as AnimationRenderer;
   }
 
-  build(animation: AnimationMetadata|AnimationMetadata[]): AnimationFactory {
+  override build(animation: AnimationMetadata|AnimationMetadata[]): AnimationFactory {
     const id = this._nextAnimationId.toString();
     this._nextAnimationId++;
     const entry = Array.isArray(animation) ? sequence(animation) : animation;
@@ -38,7 +38,7 @@ export class BrowserAnimationFactory extends AnimationFactory {
     super();
   }
 
-  create(element: any, options?: AnimationOptions): AnimationPlayer {
+  override create(element: any, options?: AnimationOptions): AnimationPlayer {
     return new RendererAnimationPlayer(this._id, element, options || {}, this._renderer);
   }
 }

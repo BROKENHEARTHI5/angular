@@ -80,11 +80,9 @@ function createLazyProperty(messages: any, id: string, valueFn: () => any) {
 
 // Extract messages as xml nodes from the xtb file
 class XtbParser implements ml.Visitor {
-  // TODO(issue/24571): remove '!'.
+  // using non-null assertions because they're (re)set by parse()
   private _bundleDepth!: number;
-  // TODO(issue/24571): remove '!'.
   private _errors!: I18nError[];
-  // TODO(issue/24571): remove '!'.
   private _msgIdToHtml!: {[msgId: string]: string};
   private _locale: string|null = null;
 
@@ -154,6 +152,12 @@ class XtbParser implements ml.Visitor {
 
   visitExpansionCase(expansionCase: ml.ExpansionCase, context: any): any {}
 
+  visitBlockGroup(group: ml.BlockGroup, context: any) {}
+
+  visitBlock(block: ml.Block, context: any) {}
+
+  visitBlockParameter(block: ml.BlockParameter, context: any) {}
+
   private _addError(node: ml.Node, message: string): void {
     this._errors.push(new I18nError(node.sourceSpan, message));
   }
@@ -161,7 +165,7 @@ class XtbParser implements ml.Visitor {
 
 // Convert ml nodes (xtb syntax) to i18n nodes
 class XmlToI18n implements ml.Visitor {
-  // TODO(issue/24571): remove '!'.
+  // using non-null assertion because it's (re)set by convert()
   private _errors!: I18nError[];
 
   convert(message: string, url: string) {
@@ -216,6 +220,12 @@ class XmlToI18n implements ml.Visitor {
   visitComment(comment: ml.Comment, context: any) {}
 
   visitAttribute(attribute: ml.Attribute, context: any) {}
+
+  visitBlockGroup(group: ml.BlockGroup, context: any) {}
+
+  visitBlock(block: ml.Block, context: any) {}
+
+  visitBlockParameter(block: ml.BlockParameter, context: any) {}
 
   private _addError(node: ml.Node, message: string): void {
     this._errors.push(new I18nError(node.sourceSpan, message));

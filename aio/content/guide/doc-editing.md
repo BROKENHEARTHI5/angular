@@ -77,7 +77,7 @@ Perform these steps from a command-line tool on your local computer or in the **
 
     <code-example language="shell">
 
-    yarn serve-and-sync
+    yarn start
 
     </code-example>
 
@@ -167,7 +167,7 @@ Remember to replace `personal` with your GitHub username.
 
     <code-example language="shell">
 
-    yarn serve-and-sync
+    yarn start
 
     </code-example>
 
@@ -257,7 +257,7 @@ Perform these steps from a command-line tool on your local computer or in the **
     <div class="alert is-important">
 
     **IMPORTANT**: <br />
-    Files that are not tracked by `git` are not committed or pushed to your repo on `github.com` and they do not appear in your pull request.
+    Files that are not tracked by `git` are not committed or pushed to your repo on `github.com`, and they do not appear in your pull request.
 
     </div>
 

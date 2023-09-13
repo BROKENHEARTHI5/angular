@@ -1,14 +1,19 @@
 import { Component } from '@angular/core';
+import { NgClass } from '@angular/common';
 
+import { ItemDetailComponent } from './item-detail.component';
+import { ItemListComponent } from './item-list.component';
 
 @Component({
+  standalone: true,
   selector: 'app-root',
   templateUrl: './app.component.html',
+  imports: [ItemDetailComponent, ItemListComponent, NgClass],
   styleUrls: ['./app.component.css']
 })
 export class AppComponent {
   // #docregion item-image
-  itemImageUrl = '../assets/phone.png';
+  itemImageUrl = '../assets/phone.svg';
   // #enddocregion item-image
   // #docregion boolean
   isUnchanged = true;

@@ -22,15 +22,15 @@ ts_library(
         "@npm//@babel/template",
         "@npm//@types/babel__generator",
         "@npm//@types/babel__template",
-        "@npm//@types/glob",
+        "@npm//fast-glob",
     ],
 )
 
 jasmine_node_test(
     name = "test",
-    bootstrap = ["//tools/testing:node_no_angular_es2015"],
+    bootstrap = ["//tools/testing:node_no_angular"],
     deps = [
         ":test_lib",
-        "@npm//glob",
+        "@npm//fast-glob",
     ],
 )

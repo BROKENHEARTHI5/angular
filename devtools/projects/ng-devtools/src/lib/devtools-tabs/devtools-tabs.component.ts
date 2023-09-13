@@ -6,7 +6,6 @@
  * found in the LICENSE file at https://angular.io/license
  */
 
-/// <reference types="resize-observer-browser" />
 import {AfterViewInit, Component, Input, OnDestroy, OnInit, ViewChild} from '@angular/core';
 import {MatSlideToggleChange} from '@angular/material/slide-toggle';
 import {MatTabNav} from '@angular/material/tabs';
@@ -34,6 +33,7 @@ export class DevToolsTabsComponent implements OnInit, OnDestroy, AfterViewInit {
   inspectorRunning = false;
   routerTreeEnabled = false;
   showCommentNodes = false;
+  timingAPIEnabled = false;
 
   private _currentThemeSubscription: Subscription;
   currentTheme: Theme;
@@ -52,6 +52,8 @@ export class DevToolsTabsComponent implements OnInit, OnDestroy, AfterViewInit {
     this._messageBus.on('updateRouterTree', (routes) => {
       this.routes = routes || [];
     });
+
+    this.navbar.stretchTabs = false;
   }
 
   get tabs(): string[] {
@@ -98,8 +100,9 @@ export class DevToolsTabsComponent implements OnInit, OnDestroy, AfterViewInit {
     this.inspectorRunning = !this.inspectorRunning;
   }
 
-  toggleTimingAPI(change: MatSlideToggleChange): void {
-    change.checked ? this._messageBus.emit('enableTimingAPI') :
-                     this._messageBus.emit('disableTimingAPI');
+  toggleTimingAPI(): void {
+    this.timingAPIEnabled = !this.timingAPIEnabled;
+    this.timingAPIEnabled ? this._messageBus.emit('enableTimingAPI') :
+                            this._messageBus.emit('disableTimingAPI');
   }
 }

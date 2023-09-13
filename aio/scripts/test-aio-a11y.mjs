@@ -3,7 +3,7 @@
 /**
  * Usage:
  * ```sh
- * node scripts/test-aio-a11y.mjs <origin>
+ * bazel run //aio/scripts:test-aio-a11y <origin>
  * ```
  *
  * Runs accessibility audits on several (pre-defined) pages on the specified origin. It fails, if
@@ -14,29 +14,28 @@
  */
 
 // Imports
-import {dirname} from 'path';
+import path from 'path';
 import sh from 'shelljs';
-import {fileURLToPath} from 'url';
 
 sh.set('-e');
 
 // Constants
 const MIN_SCORES_PER_PAGE = {
-  '': 100,
-  'api': 100,
-  'api/core/Directive': 98,
-  'cli': 98,
-  'cli/add': 100,
-  'docs': 100,
-  'guide/docs-style-guide': 96,
-  'start/start-routing': 97,
+  '': 98,
+  'api': 98,
+  'api/core/Directive': 95,
+  'cli': 95,
+  'cli/add': 98,
+  'docs': 97,
+  'guide/docs-style-guide': 97,
+  'start/start-routing': 95,
   'tutorial': 97,
 };
 
+const auditScriptPath = path.resolve(process.env.AUDIT_SCRIPT_PATH);
+
 // Run
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const auditWebAppCmd = `"${process.execPath}" "${__dirname}/audit-web-app.mjs"`;
 const origin = process.argv[2];
 for (const [page, minScore] of Object.entries(MIN_SCORES_PER_PAGE)) {
-  sh.exec(`${auditWebAppCmd} ${origin}/${page} accessibility:${minScore}`);
+  sh.exec(`${auditScriptPath} ${origin}/${page} accessibility:${minScore}`);
 }

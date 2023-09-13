@@ -51,6 +51,7 @@ new as of May 2017 and not very stable yet.
 - Test package in node: `yarn test packages/core/test:test`
 - Test package in karma: `yarn test packages/core/test:test_web`
 - Test all packages: `yarn test packages/...`
+- Test angular.io app locally: `yarn test //aio/... --config=aio_local_deps`
 
 **Note**: The ellipsis in the last command above are not meant to be substituted by a package name, but
 are used by Bazel as a wildcard to execute all tests in the specified path. To execute all the tests for a
@@ -190,7 +191,7 @@ Contact Alex Eagle with questions.
 If a build seems slow you can use Bazel to diagnose where time is spent.
 
 The first step is to generate a profile of the build using the `--profile filename_name.profile` flag.
-```
+```sh
 yarn bazel build //packages/compiler --profile filename_name.profile
 ```
 
@@ -199,20 +200,20 @@ This will generate a `filename_name.profile` that you can then analyse using [an
 ## Using the console profile report
 
 You can obtain a simple report directly in the console by running:
-```
+```sh
 yarn bazel analyze-profile filename_name.profile
 ```
 
 This will show the phase summary, individual phase information and critical path.
 
 You can also list all individual tasks and the time they took using `--task_tree`.
-```
+```sh
 yarn bazel analyze-profile filename_name.profile --task_tree ".*"
 ```
 
 To show all tasks that take longer than a certain threshold, use the `--task_tree_threshold` flag.
 The default behavior is to use a 50ms threshold.
-```
+```sh
 yarn bazel analyze-profile filename_name.profile --task_tree ".*" --task_tree_threshold 5000
 ```
 
@@ -225,7 +226,7 @@ Compiling TypeScript shows as:
 
 To filter all tasks by TypeScript compilations that took more than 5 seconds, use:
 
-```
+```sh
 yarn bazel analyze-profile filename_name.profile --task_tree "Compiling TypeScript" --task_tree_threshold 5000
 ```
 
@@ -233,7 +234,7 @@ yarn bazel analyze-profile filename_name.profile --task_tree "Compiling TypeScri
 
 A more comprehensive way to visualize the profile information is through the HTML report:
 
-```
+```sh
 yarn bazel analyze-profile filename_name.profile --html --html_details --html_histograms
 ```
 
@@ -283,7 +284,6 @@ e.g: `yarn bazel test packages/core/test/bundling/forms:symbol_test`
 #### mkdir missing
 If you see the following error::
 ```
-
 ERROR: An error occurred during the fetch of repository 'npm':
    Traceback (most recent call last):
         File "C:/users/anusername/_bazel_anusername/idexbm2i/external/build_bazel_rules_nodejs/internal/npm_install/npm_install.bzl", line 618, column 15, in _yarn_install_impl
@@ -291,7 +291,6 @@ ERROR: An error occurred during the fetch of repository 'npm':
         File "C:/users/anusername/_bazel_anusername/idexbm2i/external/build_bazel_rules_nodejs/internal/npm_install/npm_install.bzl", line 345, column 17, in _copy_file
                 fail("mkdir -p %s failed: \nSTDOUT:\n%s\nSTDERR:\n%s" % (dirname, result.stdout, result.stderr))
 Error in fail: mkdir -p _ failed:
-
 ```
 The `msys64` library and associated tools (like `mkdir`) are required to build Angular.
 
@@ -301,10 +300,9 @@ After that, a `git clean -xfd`, `yarn`, and `yarn build` should resolve this iss
 
 ### Xcode
 
-If you see the following error:
+If running `yarn bazel build packages/...` returns the following error:
 
 ```
-$ yarn bazel build packages/...
 ERROR: /private/var/tmp/[...]/external/local_config_cc/BUILD:50:5: in apple_cc_toolchain rule @local_config_cc//:cc-compiler-darwin_x86_64: Xcode version must be specified to use an Apple CROSSTOOL
 ERROR: Analysis of target '//packages/core/test/render3:render3' failed; build aborted: Analysis of target '@local_config_cc//:cc-compiler-darwin_x86_64' failed; build aborted
 ```
@@ -312,7 +310,7 @@ ERROR: Analysis of target '//packages/core/test/render3:render3' failed; build a
 It might be linked to an interaction with VSCode.
 If closing VSCode fixes the issue, you can add the following line to your VSCode configuration:
 
-```
+```json
 "files.exclude": {"bazel-*": true}
 ```
 
@@ -322,7 +320,7 @@ If VSCode is not the root cause, you might try:
 
 - Quit VSCode (make sure no VSCode is running).
 
-```
+```sh
 bazel clean --expunge
 sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
 sudo xcodebuild -license

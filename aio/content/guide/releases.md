@@ -104,17 +104,17 @@ This cadence of releases gives eager developers access to new features as soon a
 
 <div class="alert is-helpful">
 
-Dates are offered as general guidance and are subject to change.
+Approximate dates are offered as general guidance and are subject to change.
 
 </div>
 
 ### Release schedule
 
 | Version | Date               |
-| :---    | :---               |
-| v14.1   | Week of 2022-07-18 |
-| v14.2   | Week of 2022-08-22 |
-| v15.0   | Week of 2022-11-18 |
+|:--------|:-------------------|
+| v16.1   | Week of 2023-06-12 |
+| v16.2   | Week of 2023-08-07 |
+| v17.0   | Week of 2023-11-06 |
 
 ### Support window
 
@@ -130,12 +130,12 @@ All major releases are typically supported for 18 months.
 The following table provides the status for Angular versions under support.
 
 | Version | Status | Released   | Active ends | LTS ends   |
-|:---     |:---    |:---        |:---         |:---        |
-| ^14.0.0 | Active | 2022-06-02 | 2022-12-02  | 2023-12-02 |
-| ^13.0.0 | LTS    | 2021-11-04 | 2022-06-02  | 2023-05-04 |
-| ^12.0.0 | LTS    | 2021-05-12 | 2021-11-12  | 2022-11-12 |
+|:--------|:-------|:-----------|:------------|:-----------|
+| ^16.0.0 | Active | 2023-05-03 | 2023-11-03  | 2024-11-08 |
+| ^15.0.0 | LTS    | 2022-11-18 | 2023-05-03  | 2024-05-18 |
+| ^14.0.0 | LTS    | 2022-06-02 | 2022-11-18  | 2023-11-18 |
 
-Angular versions v2 to v11 are no longer under support.
+Angular versions v2 to v13 are no longer supported.
 
 ### LTS fixes
 
@@ -183,10 +183,16 @@ This may be because we want to gather feedback from real applications before sta
 
 The policies and practices that are described in this document do not apply to APIs marked as Developer Preview. Such APIs can change at any time, even in new patch versions of the framework. Teams should decide for themselves whether the benefits of using Developer Preview APIs are worth the risk of breaking changes outside of our normal use of semantic versioning.
 
+## Experimental
+
+These are APIs might not become stable at all or have significant changes before becoming stable.
+
+The policies and practices that are described in this document do not apply to APIs marked as experimental. Such APIs can change at any time, even in new patch versions of the framework. Teams should decide for themselves whether the benefits of using experimental APIs are worth the risk of breaking changes outside of our normal use of semantic versioning.
+
 <!-- links -->
 
 <!-- external links -->
 
 <!-- end links -->
 
-@reviewed 2022-02-28
+@reviewed 2023-05-03

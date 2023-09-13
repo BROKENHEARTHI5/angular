@@ -16,7 +16,7 @@ export function CustomParamDecorator() {
  ****************************************************************************************************/
 export declare function CustomClassDecorator(): ClassDecorator;
 export declare function CustomPropDecorator(): PropertyDecorator;
-export declare function CustomParamDecorator(): ParameterDecorator;
+export declare function CustomParamDecorator(): (target: Object, ...rest: any[]) => void;
 
 /****************************************************************************************************
  * PARTIAL FILE: class_decorators.js
@@ -99,7 +99,7 @@ export function CustomParamDecorator() {
  ****************************************************************************************************/
 export declare function CustomClassDecorator(): ClassDecorator;
 export declare function CustomPropDecorator(): PropertyDecorator;
-export declare function CustomParamDecorator(): ParameterDecorator;
+export declare function CustomParamDecorator(): (target: Object, ...rest: any[]) => void;
 
 /****************************************************************************************************
  * PARTIAL FILE: property_decorators.js
@@ -152,7 +152,7 @@ export declare class MyDir {
     mixed: string;
     none: string;
     static ɵfac: i0.ɵɵFactoryDeclaration<MyDir, never>;
-    static ɵdir: i0.ɵɵDirectiveDeclaration<MyDir, never, never, { "foo": "foo"; "bar": "baz"; "mixed": "mixed"; }, { "mixed": "mixed"; }, never, never, false, never>;
+    static ɵdir: i0.ɵɵDirectiveDeclaration<MyDir, never, never, { "foo": { "alias": "foo"; "required": false; }; "bar": { "alias": "baz"; "required": false; }; "mixed": { "alias": "mixed"; "required": false; }; }, { "mixed": "mixed"; }, never, never, false, never>;
 }
 
 /****************************************************************************************************
@@ -173,7 +173,7 @@ export function CustomParamDecorator() {
  ****************************************************************************************************/
 export declare function CustomClassDecorator(): ClassDecorator;
 export declare function CustomPropDecorator(): PropertyDecorator;
-export declare function CustomParamDecorator(): ParameterDecorator;
+export declare function CustomParamDecorator(): (target: Object, ...rest: any[]) => void;
 
 /****************************************************************************************************
  * PARTIAL FILE: parameter_decorators.js

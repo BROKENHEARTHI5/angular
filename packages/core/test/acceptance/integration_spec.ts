@@ -20,7 +20,6 @@ import {getLView} from '@angular/core/src/render3/state';
 import {ngDevModeResetPerfCounters} from '@angular/core/src/util/ng_dev_mode';
 import {fakeAsync, flushMicrotasks, TestBed} from '@angular/core/testing';
 import {By} from '@angular/platform-browser';
-import {expect} from '@angular/platform-browser/testing/src/matchers';
 import {expectPerfCounters} from '@angular/private/testing';
 
 describe('acceptance integration tests', () => {
@@ -1119,9 +1118,7 @@ describe('acceptance integration tests', () => {
 
            const styles = fixture.componentInstance.mockStyleDirective.stylesVal;
 
-           // Use `toContain` since Ivy and ViewEngine have some slight differences in formatting.
-           expect(styles).toContain('width: 100px');
-           expect(styles).toContain('height: 200px');
+           expect(styles).toEqual('width: 100px; height: 200px;');
          });
 
       it('should update `[class]` and bindings in the provided directive if the input is matched',
@@ -1458,8 +1455,7 @@ describe('acceptance integration tests', () => {
             .createComponent(SomeComponent);
       })
           .toThrowError(
-              // The ViewEngine error has a typo, whereas the Ivy one fixes it.
-              /^Unexpected directive 'SomeComponent' imported by the module 'ModuleWithImportedComponent'\. Please add (a|an) @NgModule annotation\.$/);
+              /^Unexpected directive 'SomeComponent' imported by the module 'ModuleWithImportedComponent'\. Please add an @NgModule annotation\.$/);
     });
 
     it('should throw with descriptive error message when a pipe is passed to imports', () => {
@@ -1477,8 +1473,7 @@ describe('acceptance integration tests', () => {
             .createComponent(FixtureComponent);
       })
           .toThrowError(
-              // The ViewEngine error has a typo, whereas the Ivy one fixes it.
-              /^Unexpected pipe 'SomePipe' imported by the module 'ModuleWithImportedPipe'\. Please add (a|an) @NgModule annotation\.$/);
+              /^Unexpected pipe 'SomePipe' imported by the module 'ModuleWithImportedPipe'\. Please add an @NgModule annotation\.$/);
     });
 
     it('should throw with descriptive error message when a module is passed to declarations', () => {
@@ -1530,9 +1525,41 @@ describe('acceptance integration tests', () => {
                .createComponent(FixtureComponent);
          })
              .toThrowError(
-                 // The ViewEngine error has a typo, whereas the Ivy one fixes it.
-                 /^Unexpected value 'SomeModule' imported by the module 'ModuleWithImportedModule'\. Please add (a|an) @NgModule annotation\.$/);
+                 /^Unexpected value 'SomeModule' imported by the module 'ModuleWithImportedModule'\. Please add an @NgModule annotation\.$/);
        });
+  });
+
+  describe('self-closing tags', () => {
+    it('should allow a self-closing tag for a custom tag name', () => {
+      @Component({selector: 'my-comp', template: 'hello'})
+      class MyComp {
+      }
+
+      @Component({template: '<my-comp/>'})
+      class App {
+      }
+
+      TestBed.configureTestingModule({declarations: [App, MyComp]});
+      const fixture = TestBed.createComponent(App);
+
+      expect(fixture.nativeElement.innerHTML).toEqual('<my-comp>hello</my-comp>');
+    });
+
+    it('should not confuse self-closing tag for an end tag', () => {
+      @Component({selector: 'my-comp', template: '<ng-content/>'})
+      class MyComp {
+      }
+
+      @Component({template: '<my-comp title="a">Before<my-comp title="b"/>After</my-comp>'})
+      class App {
+      }
+
+      TestBed.configureTestingModule({declarations: [App, MyComp]});
+      const fixture = TestBed.createComponent(App);
+
+      expect(fixture.nativeElement.innerHTML)
+          .toEqual('<my-comp title="a">Before<my-comp title="b"></my-comp>After</my-comp>');
+    });
   });
 
   it('should only call inherited host listeners once', () => {
@@ -1589,7 +1616,7 @@ describe('acceptance integration tests', () => {
     fixture.detectChanges();
 
     expect(subInstance.dirs.length).toBe(1);
-    expect(subInstance.dirs.first).toBeAnInstanceOf(SomeDir);
+    expect(subInstance.dirs.first).toBeInstanceOf(SomeDir);
   });
 
   it('should not set inputs after destroy', () => {
@@ -2302,6 +2329,27 @@ describe('acceptance integration tests', () => {
     fixture.detectChanges();
 
     expect(strong.textContent).toBe('Hello Frodo');
+  });
+
+  it('should not throw for a non-null assertion after a safe access', () => {
+    @Component({
+      template: `
+        {{ val?.foo!.bar }}
+        {{ val?.[0].foo!.bar }}
+        {{ foo(val)?.foo!.bar }}
+        {{ $any(val)?.foo!.bar }}
+      `,
+    })
+    class Comp {
+      val: any = null;
+
+      foo(val: unknown) {
+        return val;
+      }
+    }
+
+    TestBed.configureTestingModule({declarations: [Comp]});
+    expect(() => TestBed.createComponent(Comp).detectChanges()).not.toThrow();
   });
 
   describe('tView.firstUpdatePass', () => {

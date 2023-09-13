@@ -10,10 +10,9 @@ import ts from 'typescript';
 
 import {OwningModule, Reference} from '../../imports';
 import {ClassDeclaration, ClassMember, ClassMemberKind, isNamedClassDeclaration, ReflectionHost, reflectTypeEntityToDeclaration} from '../../reflection';
-import {getModifiers} from '../../ts_compatibility';
 import {nodeDebugInfo} from '../../util/src/typescript';
 
-import {DirectiveMeta, DirectiveTypeCheckMeta, MetadataReader, NgModuleMeta, PipeMeta, TemplateGuardMeta} from './api';
+import {DirectiveMeta, DirectiveTypeCheckMeta, InputMapping, MetadataReader, NgModuleMeta, PipeMeta, TemplateGuardMeta} from './api';
 import {ClassPropertyMapping, ClassPropertyName} from './property_mapping';
 
 export function extractReferencesFromType(
@@ -85,10 +84,9 @@ export function readMapType<T>(
       return;
     }
     const value = valueTransform(member.type);
-    if (value === null) {
-      return null;
+    if (value !== null) {
+      obj[member.name.text] = value;
     }
-    obj[member.name.text] = value;
   });
   return obj;
 }
@@ -113,7 +111,7 @@ export function readStringArrayType(type: ts.TypeNode): string[] {
  * making this metadata invariant to changes of inherited classes.
  */
 export function extractDirectiveTypeCheckMeta(
-    node: ClassDeclaration, inputs: ClassPropertyMapping,
+    node: ClassDeclaration, inputs: ClassPropertyMapping<InputMapping>,
     reflector: ReflectionHost): DirectiveTypeCheckMeta {
   const members = reflector.getMembersOfClass(node);
   const staticMembers = members.filter(member => member.isStatic);
@@ -130,7 +128,7 @@ export function extractDirectiveTypeCheckMeta(
   const stringLiteralInputFields = new Set<ClassPropertyName>();
   const undeclaredInputFields = new Set<ClassPropertyName>();
 
-  for (const classPropertyName of inputs.classPropertyNames) {
+  for (const {classPropertyName, transform} of inputs) {
     const field = members.find(member => member.name === classPropertyName);
     if (field === undefined || field.node === null) {
       undeclaredInputFields.add(classPropertyName);
@@ -141,6 +139,9 @@ export function extractDirectiveTypeCheckMeta(
     }
     if (field.nameNode !== null && ts.isStringLiteral(field.nameNode)) {
       stringLiteralInputFields.add(classPropertyName);
+    }
+    if (transform !== null) {
+      coercedInputFields.add(classPropertyName);
     }
   }
 
@@ -158,7 +159,7 @@ export function extractDirectiveTypeCheckMeta(
 }
 
 function isRestricted(node: ts.Node): boolean {
-  const modifiers = getModifiers(node);
+  const modifiers = ts.canHaveModifiers(node) ? ts.getModifiers(node) : undefined;
 
   return modifiers !== undefined && modifiers.some(({kind}) => {
     return kind === ts.SyntaxKind.PrivateKeyword || kind === ts.SyntaxKind.ProtectedKeyword ||

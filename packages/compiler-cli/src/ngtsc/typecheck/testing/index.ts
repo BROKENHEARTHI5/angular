@@ -6,14 +6,14 @@
  * found in the LICENSE file at https://angular.io/license
  */
 
-import {CssSelector, ParseSourceFile, ParseSourceSpan, parseTemplate, R3TargetBinder, SchemaMetadata, SelectorMatcher, TmplAstElement, Type} from '@angular/compiler';
+import {CssSelector, ParseSourceFile, ParseSourceSpan, parseTemplate, ParseTemplateOptions, R3TargetBinder, SchemaMetadata, SelectorMatcher, TmplAstElement} from '@angular/compiler';
 import ts from 'typescript';
 
 import {absoluteFrom, AbsoluteFsPath, getSourceFileOrError, LogicalFileSystem} from '../../file_system';
 import {TestFile} from '../../file_system/testing';
-import {AbsoluteModuleStrategy, LocalIdentifierStrategy, LogicalProjectStrategy, ModuleResolver, Reexport, Reference, ReferenceEmitter, RelativePathStrategy} from '../../imports';
+import {AbsoluteModuleStrategy, LocalIdentifierStrategy, LogicalProjectStrategy, ModuleResolver, Reference, ReferenceEmitter, RelativePathStrategy} from '../../imports';
 import {NOOP_INCREMENTAL_BUILD} from '../../incremental';
-import {ClassPropertyMapping, CompoundMetadataReader, DirectiveMeta, HostDirectivesResolver, MatchSource, MetadataReader, MetadataReaderWithIndex, MetaKind} from '../../metadata';
+import {ClassPropertyMapping, CompoundMetadataReader, DirectiveMeta, HostDirectivesResolver, InputMapping, InputTransform, MatchSource, MetadataReaderWithIndex, MetaKind, NgModuleIndex} from '../../metadata';
 import {NOOP_PERF_RECORDER} from '../../perf';
 import {TsCreateProgramDriver} from '../../program_driver';
 import {ClassDeclaration, isNamedClassDeclaration, TypeScriptReflectionHost} from '../../reflection';
@@ -228,12 +228,20 @@ export interface TestDirective extends Partial<Pick<
     Exclude<
         keyof TypeCheckableDirectiveMeta,
         'ref'|'coercedInputFields'|'restrictedInputFields'|'stringLiteralInputFields'|
-        'undeclaredInputFields'|'inputs'|'outputs'>>> {
+        'undeclaredInputFields'|'inputs'|'outputs'|'hostDirectives'>>> {
   selector: string;
   name: string;
   file?: AbsoluteFsPath;
   type: 'directive';
-  inputs?: {[fieldName: string]: string};
+  inputs?: {
+    [fieldName: string]:
+        string|{
+          classPropertyName: string;
+          bindingPropertyName: string;
+          required: boolean;
+          transform: InputTransform|null;
+        }
+  };
   outputs?: {[fieldName: string]: string};
   coercedInputFields?: string[];
   restrictedInputFields?: string[];
@@ -261,7 +269,7 @@ export type TestDeclaration = TestDirective|TestPipe;
 
 export function tcb(
     template: string, declarations: TestDeclaration[] = [], config?: Partial<TypeCheckingConfig>,
-    options?: {emitSpans?: boolean}): string {
+    options?: {emitSpans?: boolean}, templateParserOptions?: ParseTemplateOptions): string {
   const codeLines = [`export class Test<T extends string> {}`];
 
   (function addCodeLines(currentDeclarations) {
@@ -282,7 +290,11 @@ export function tcb(
   const sf = getSourceFileOrError(program, rootFilePath);
   const clazz = getClass(sf, 'Test');
   const templateUrl = 'synthetic.html';
-  const {nodes} = parseTemplate(template, templateUrl);
+  const {nodes, errors} = parseTemplate(template, templateUrl, templateParserOptions);
+
+  if (errors !== null) {
+    throw new Error('Template parse errors: \n' + errors.join('\n'));
+  }
 
   const {matcher, pipes} =
       prepareDeclarations(declarations, decl => getClass(sf, decl.name), new Map());
@@ -550,14 +562,15 @@ export function setup(targets: TypeCheckingTarget[], overrides: {
   };
 
   const fakeMetadataReader = getFakeMetadataReader(fakeMetadataRegistry);
+  const fakeNgModuleIndex = getFakeNgModuleIndex(fakeMetadataRegistry);
   const typeCheckScopeRegistry = new TypeCheckScopeRegistry(
       fakeScopeReader, new CompoundMetadataReader([fakeMetadataReader]),
       new HostDirectivesResolver(fakeMetadataReader));
 
   const templateTypeChecker = new TemplateTypeCheckerImpl(
       program, programStrategy, checkAdapter, fullConfig, emitter, reflectionHost, host,
-      NOOP_INCREMENTAL_BUILD, fakeMetadataReader, fakeMetadataReader, fakeScopeReader,
-      typeCheckScopeRegistry, NOOP_PERF_RECORDER);
+      NOOP_INCREMENTAL_BUILD, fakeMetadataReader, fakeMetadataReader, fakeNgModuleIndex,
+      fakeScopeReader, typeCheckScopeRegistry, NOOP_PERF_RECORDER);
   return {
     templateTypeChecker,
     program,
@@ -577,10 +590,22 @@ function getFakeMetadataReader(fakeMetadataRegistry: Map<any, DirectiveMeta|null
         null {
           return fakeMetadataRegistry.get(node.debugName) ?? null;
         },
-    getKnownDirectives(): Iterable<ClassDeclaration> {
-      return fakeMetadataRegistry.keys();
+    getKnown(kind: MetaKind): Array<ClassDeclaration> {
+      switch (kind) {
+        // TODO: This is not needed for these ngtsc tests, but may be wanted in the future.
+        default:
+          return [];
+      }
     }
   } as MetadataReaderWithIndex;
+}
+
+function getFakeNgModuleIndex(fakeMetadataRegistry: Map<any, DirectiveMeta|null>): NgModuleIndex {
+  return {
+    getNgModulesExporting(trait: ClassDeclaration): Array<Reference<ClassDeclaration>> {
+      return [];
+    }
+  } as NgModuleIndex;
 }
 
 type DeclarationResolver = (decl: TestDeclaration) => ClassDeclaration<ts.ClassDeclaration>;
@@ -636,7 +661,7 @@ function getDirectiveMetaFromDeclaration(
     exportAs: decl.exportAs || null,
     selector: decl.selector || null,
     hasNgTemplateContextGuard: decl.hasNgTemplateContextGuard || false,
-    inputs: ClassPropertyMapping.fromMappedObject(decl.inputs || {}),
+    inputs: ClassPropertyMapping.fromMappedObject<InputMapping>(decl.inputs || {}),
     isComponent: decl.isComponent || false,
     ngTemplateGuards: decl.ngTemplateGuards || [],
     coercedInputFields: new Set<string>(decl.coercedInputFields || []),
@@ -648,8 +673,10 @@ function getDirectiveMetaFromDeclaration(
     queries: decl.queries || [],
     isStructural: false,
     isStandalone: !!decl.isStandalone,
+    isSignal: !!decl.isSignal,
     baseClass: null,
     animationTriggerNames: null,
+    decorator: null,
     hostDirectives: decl.hostDirectives === undefined ? null : decl.hostDirectives.map(hostDecl => {
       return {
         directive: new Reference(resolveDeclaration(hostDecl.directive)),
@@ -685,24 +712,26 @@ function makeScope(program: ts.Program, sf: ts.SourceFile, decls: TestDeclaratio
         name: decl.name,
         selector: decl.selector,
         queries: [],
-        inputs: ClassPropertyMapping.fromMappedObject(decl.inputs || {}),
+        inputs: ClassPropertyMapping.fromMappedObject<InputMapping>(decl.inputs || {}),
         outputs: ClassPropertyMapping.fromMappedObject(decl.outputs || {}),
         isComponent: decl.isComponent ?? false,
         exportAs: decl.exportAs ?? null,
         ngTemplateGuards: decl.ngTemplateGuards ?? [],
         hasNgTemplateContextGuard: decl.hasNgTemplateContextGuard ?? false,
-        coercedInputFields: new Set(decl.coercedInputFields ?? []),
-        restrictedInputFields: new Set(decl.restrictedInputFields ?? []),
-        stringLiteralInputFields: new Set(decl.stringLiteralInputFields ?? []),
-        undeclaredInputFields: new Set(decl.undeclaredInputFields ?? []),
+        coercedInputFields: new Set<string>(decl.coercedInputFields ?? []),
+        restrictedInputFields: new Set<string>(decl.restrictedInputFields ?? []),
+        stringLiteralInputFields: new Set<string>(decl.stringLiteralInputFields ?? []),
+        undeclaredInputFields: new Set<string>(decl.undeclaredInputFields ?? []),
         isGeneric: decl.isGeneric ?? false,
         isPoisoned: false,
         isStructural: false,
         animationTriggerNames: null,
         isStandalone: false,
+        isSignal: false,
         imports: null,
         schemas: null,
         decorator: null,
+        assumedToExportProviders: false,
         hostDirectives:
             decl.hostDirectives === undefined ? null : decl.hostDirectives.map(hostDecl => {
               return {
@@ -713,8 +742,8 @@ function makeScope(program: ts.Program, sf: ts.SourceFile, decls: TestDeclaratio
                     hostDecl.directive.name)),
                 origin: sf,
                 isForwardReference: false,
-                inputs: hostDecl.directive.inputs || {},
-                outputs: hostDecl.directive.outputs || {},
+                inputs: hostDecl.inputs || {},
+                outputs: hostDecl.outputs || {},
               };
             }),
       });
@@ -768,4 +797,5 @@ export class NoopOobRecorder implements OutOfBandDiagnosticRecorder {
   requiresInlineTypeConstructors(): void {}
   suboptimalTypeInference(): void {}
   splitTwoWayBinding(): void {}
+  missingRequiredInputs(): void {}
 }

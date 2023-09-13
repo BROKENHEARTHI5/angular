@@ -10,7 +10,7 @@ import {AnimationTriggerNames, R3ClassMetadata, R3ComponentMetadata, R3TemplateD
 import ts from 'typescript';
 
 import {Reference} from '../../../imports';
-import {ClassPropertyMapping, ComponentResources, DirectiveTypeCheckMeta, HostDirectiveMeta} from '../../../metadata';
+import {ClassPropertyMapping, ComponentResources, DirectiveTypeCheckMeta, HostDirectiveMeta, InputMapping} from '../../../metadata';
 import {ClassDeclaration} from '../../../reflection';
 import {SubsetOfKeys} from '../../../util/src/typescript';
 
@@ -23,7 +23,8 @@ import {ParsedTemplateWithSource, StyleUrlMeta} from './resources';
  * be included here.
  */
 export type ComponentMetadataResolvedFields = SubsetOfKeys<
-    R3ComponentMetadata<R3TemplateDependencyMetadata>, 'declarations'|'declarationListEmitMode'>;
+    R3ComponentMetadata<R3TemplateDependencyMetadata>,
+    'declarations'|'declarationListEmitMode'|'deferBlocks'|'deferrableDeclToImportDecl'>;
 
 export interface ComponentAnalysisData {
   /**
@@ -36,7 +37,7 @@ export interface ComponentAnalysisData {
   template: ParsedTemplateWithSource;
   classMetadata: R3ClassMetadata|null;
 
-  inputs: ClassPropertyMapping;
+  inputs: ClassPropertyMapping<InputMapping>;
   outputs: ClassPropertyMapping;
 
   /**

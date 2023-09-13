@@ -5,7 +5,7 @@ ParameterizedInjectable = __decorate([
   __param(3, CustomParamDecorator()),
   __metadata("design:paramtypes", [Service, String, Service, String])
 ], ParameterizedInjectable);
-export {ParameterizedInjectable};
+…
 (function () {
   (typeof ngDevMode === "undefined" || ngDevMode) && i0.ɵsetClassMetadata(ParameterizedInjectable, [{
     type: Injectable

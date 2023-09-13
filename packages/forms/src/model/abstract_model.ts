@@ -15,28 +15,27 @@ import {RuntimeErrorCode} from '../errors';
 import {FormArray, FormGroup} from '../forms';
 import {addValidators, composeAsyncValidators, composeValidators, hasValidator, removeValidators, toObservable} from '../validators';
 
-const NG_DEV_MODE = typeof ngDevMode === 'undefined' || !!ngDevMode;
 
 /**
  * Reports that a control is valid, meaning that no errors exist in the input value.
  *
- * @see `status`
+ * @see {@link status}
  */
 export const VALID = 'VALID';
 
 /**
  * Reports that a control is invalid, meaning that an error exists in the input value.
  *
- * @see `status`
+ * @see {@link status}
  */
 export const INVALID = 'INVALID';
 
 /**
- * Reports that a control is pending, meaning that that async validation is occurring and
+ * Reports that a control is pending, meaning that async validation is occurring and
  * errors are not yet available for the input value.
  *
- * @see `markAsPending`
- * @see `status`
+ * @see {@link markAsPending}
+ * @see {@link status}
  */
 export const PENDING = 'PENDING';
 
@@ -44,8 +43,8 @@ export const PENDING = 'PENDING';
  * Reports that a control is disabled, meaning that the control is exempt from ancestor
  * calculations of validity or value.
  *
- * @see `markAsDisabled`
- * @see `status`
+ * @see {@link markAsDisabled}
+ * @see {@link status}
  */
 export const DISABLED = 'DISABLED';
 
@@ -57,7 +56,7 @@ export const DISABLED = 'DISABLED';
  * value.
  * * **INVALID**: Reports that a control is invalid, meaning that an error exists in the input
  * value.
- * * **PENDING**: Reports that a control is pending, meaning that that async validation is
+ * * **PENDING**: Reports that a control is pending, meaning that async validation is
  * occurring and errors are not yet available for the input value.
  * * **DISABLED**: Reports that a control is
  * disabled, meaning that the control is exempt from ancestor calculations of validity or value.
@@ -141,11 +140,13 @@ export function assertControlPresent(parent: any, isGroup: boolean, key: string|
   const collection = isGroup ? Object.keys(controls) : controls;
   if (!collection.length) {
     throw new RuntimeError(
-        RuntimeErrorCode.NO_CONTROLS, NG_DEV_MODE ? noControlsError(isGroup) : '');
+        RuntimeErrorCode.NO_CONTROLS,
+        (typeof ngDevMode === 'undefined' || ngDevMode) ? noControlsError(isGroup) : '');
   }
   if (!controls[key]) {
     throw new RuntimeError(
-        RuntimeErrorCode.MISSING_CONTROL, NG_DEV_MODE ? missingControlError(isGroup, key) : '');
+        RuntimeErrorCode.MISSING_CONTROL,
+        (typeof ngDevMode === 'undefined' || ngDevMode) ? missingControlError(isGroup, key) : '');
   }
 }
 
@@ -154,7 +155,8 @@ export function assertAllValuesPresent(control: any, isGroup: boolean, value: an
     if (value[key] === undefined) {
       throw new RuntimeError(
           RuntimeErrorCode.MISSING_CONTROL_VALUE,
-          NG_DEV_MODE ? missingControlValueError(isGroup, key) : '');
+          (typeof ngDevMode === 'undefined' || ngDevMode) ? missingControlValueError(isGroup, key) :
+                                                            '');
     }
   });
 }
@@ -319,7 +321,7 @@ export type ɵWriteable<T> = {
 export type ɵGetProperty<T, K> =
     // K is a string
     K extends string ? ɵGetProperty<T, ɵCoerceStrArrToNumArr<ɵTokenize<K, '.'>>> :
-    // Is is an array
+    // Is it an array
     ɵWriteable<K> extends Array<string|number> ? ɵNavigate<T, ɵWriteable<K>> :
     // Fall through permissively if we can't calculate the type of K.
     any;
@@ -372,7 +374,7 @@ export abstract class AbstractControl<TValue = any, TRawValue extends TValue = T
    *
    * @internal
    */
-  private _composedValidatorFn: ValidatorFn|null;
+  private _composedValidatorFn!: ValidatorFn|null;
 
   /**
    * Contains the result of merging asynchronous validators into a single validator function
@@ -380,7 +382,7 @@ export abstract class AbstractControl<TValue = any, TRawValue extends TValue = T
    *
    * @internal
    */
-  private _composedAsyncValidatorFn: AsyncValidatorFn|null;
+  private _composedAsyncValidatorFn!: AsyncValidatorFn|null;
 
   /**
    * Synchronous validators as they were provided:
@@ -390,7 +392,7 @@ export abstract class AbstractControl<TValue = any, TRawValue extends TValue = T
    *
    * @internal
    */
-  private _rawValidators: ValidatorFn|ValidatorFn[]|null;
+  private _rawValidators!: ValidatorFn|ValidatorFn[]|null;
 
   /**
    * Asynchronous validators as they were provided:
@@ -401,7 +403,7 @@ export abstract class AbstractControl<TValue = any, TRawValue extends TValue = T
    *
    * @internal
    */
-  private _rawAsyncValidators: AsyncValidatorFn|AsyncValidatorFn[]|null;
+  private _rawAsyncValidators!: AsyncValidatorFn|AsyncValidatorFn[]|null;
 
   /**
    * The current value of the control.
@@ -427,10 +429,8 @@ export abstract class AbstractControl<TValue = any, TRawValue extends TValue = T
   constructor(
       validators: ValidatorFn|ValidatorFn[]|null,
       asyncValidators: AsyncValidatorFn|AsyncValidatorFn[]|null) {
-    this._rawValidators = validators;
-    this._rawAsyncValidators = asyncValidators;
-    this._composedValidatorFn = coerceToValidator(this._rawValidators);
-    this._composedAsyncValidatorFn = coerceToAsyncValidator(this._rawAsyncValidators);
+    this._assignValidators(validators);
+    this._assignAsyncValidators(asyncValidators);
   }
 
   /**
@@ -467,7 +467,7 @@ export abstract class AbstractControl<TValue = any, TRawValue extends TValue = T
   /**
    * The validation status of the control.
    *
-   * @see `FormControlStatus`
+   * @see {@link FormControlStatus}
    *
    * These status values are mutually exclusive, so a control cannot be
    * both valid AND invalid or invalid AND disabled.
@@ -586,6 +586,12 @@ export abstract class AbstractControl<TValue = any, TRawValue extends TValue = T
    * A multicasting observable that emits an event every time the value of the control changes, in
    * the UI or programmatically. It also emits an event each time you call enable() or disable()
    * without passing along {emitEvent: false} as a function argument.
+   *
+   * **Note**: the emit happens right after a value of this control is updated. The value of a
+   * parent control (for example if this FormControl is a part of a FormGroup) is updated later, so
+   * accessing a value of a parent control (using the `value` property) from the callback of this
+   * event might result in getting a value that has not been updated yet. Subscribe to the
+   * `valueChanges` event of the parent control instead.
    */
   public readonly valueChanges!: Observable<TValue>;
 
@@ -593,7 +599,7 @@ export abstract class AbstractControl<TValue = any, TRawValue extends TValue = T
    * A multicasting observable that emits an event every time the validation `status` of the control
    * recalculates.
    *
-   * @see `FormControlStatus`
+   * @see {@link FormControlStatus}
    * @see {@link AbstractControl.status}
    *
    */
@@ -620,8 +626,7 @@ export abstract class AbstractControl<TValue = any, TRawValue extends TValue = T
    * using `addValidators()` method instead.
    */
   setValidators(validators: ValidatorFn|ValidatorFn[]|null): void {
-    this._rawValidators = validators;
-    this._composedValidatorFn = coerceToValidator(validators);
+    this._assignValidators(validators);
   }
 
   /**
@@ -635,8 +640,7 @@ export abstract class AbstractControl<TValue = any, TRawValue extends TValue = T
    * using `addAsyncValidators()` method instead.
    */
   setAsyncValidators(validators: AsyncValidatorFn|AsyncValidatorFn[]|null): void {
-    this._rawAsyncValidators = validators;
-    this._composedAsyncValidatorFn = coerceToAsyncValidator(validators);
+    this._assignAsyncValidators(validators);
   }
 
   /**
@@ -689,7 +693,7 @@ export abstract class AbstractControl<TValue = any, TRawValue extends TValue = T
    * const minValidator = Validators.min(3);
    * const ctrl = new FormControl<string | null>('', minValidator);
    * expect(ctrl.hasValidator(minValidator)).toEqual(true)
-   * expect(ctrl.hasValidator(Validators.min(3)).toEqual(false)
+   * expect(ctrl.hasValidator(Validators.min(3))).toEqual(false)
    *
    * ctrl.removeValidators(minValidator);
    * ```
@@ -735,7 +739,7 @@ export abstract class AbstractControl<TValue = any, TRawValue extends TValue = T
    * const minValidator = Validators.min(3);
    * const ctrl = new FormControl<number | null>(0, minValidator);
    * expect(ctrl.hasValidator(minValidator)).toEqual(true)
-   * expect(ctrl.hasValidator(Validators.min(3)).toEqual(false)
+   * expect(ctrl.hasValidator(Validators.min(3))).toEqual(false)
    * ```
    *
    * @param validator The validator to check for presence. Compared by function reference.
@@ -783,9 +787,9 @@ export abstract class AbstractControl<TValue = any, TRawValue extends TValue = T
    * Marks the control as `touched`. A control is touched by focus and
    * blur events that do not change the value.
    *
-   * @see `markAsUntouched()`
-   * @see `markAsDirty()`
-   * @see `markAsPristine()`
+   * @see {@link markAsUntouched()}
+   * @see {@link markAsDirty()}
+   * @see {@link markAsPristine()}
    *
    * @param opts Configuration options that determine how the control propagates changes
    * and emits events after marking is applied.
@@ -802,7 +806,7 @@ export abstract class AbstractControl<TValue = any, TRawValue extends TValue = T
 
   /**
    * Marks the control and all its descendant controls as `touched`.
-   * @see `markAsTouched()`
+   * @see {@link markAsTouched()}
    */
   markAllAsTouched(): void {
     this.markAsTouched({onlySelf: true});
@@ -816,9 +820,9 @@ export abstract class AbstractControl<TValue = any, TRawValue extends TValue = T
    * If the control has any children, also marks all children as `untouched`
    * and recalculates the `touched` status of all parent controls.
    *
-   * @see `markAsTouched()`
-   * @see `markAsDirty()`
-   * @see `markAsPristine()`
+   * @see {@link markAsTouched()}
+   * @see {@link markAsDirty()}
+   * @see {@link markAsPristine()}
    *
    * @param opts Configuration options that determine how the control propagates changes
    * and emits events after the marking is applied.
@@ -842,9 +846,9 @@ export abstract class AbstractControl<TValue = any, TRawValue extends TValue = T
    * Marks the control as `dirty`. A control becomes dirty when
    * the control's value is changed through the UI; compare `markAsTouched`.
    *
-   * @see `markAsTouched()`
-   * @see `markAsUntouched()`
-   * @see `markAsPristine()`
+   * @see {@link markAsTouched()}
+   * @see {@link markAsUntouched()}
+   * @see {@link markAsPristine()}
    *
    * @param opts Configuration options that determine how the control propagates changes
    * and emits events after marking is applied.
@@ -866,9 +870,9 @@ export abstract class AbstractControl<TValue = any, TRawValue extends TValue = T
    * and recalculates the `pristine` status of all parent
    * controls.
    *
-   * @see `markAsTouched()`
-   * @see `markAsUntouched()`
-   * @see `markAsDirty()`
+   * @see {@link markAsTouched()}
+   * @see {@link markAsUntouched()}
+   * @see {@link markAsDirty()}
    *
    * @param opts Configuration options that determine how the control emits events after
    * marking is applied.
@@ -1376,5 +1380,25 @@ export abstract class AbstractControl<TValue = any, TRawValue extends TValue = T
   /** @internal */
   _find(name: string|number): AbstractControl|null {
     return null;
+  }
+
+  /**
+   * Internal implementation of the `setValidators` method. Needs to be separated out into a
+   * different method, because it is called in the constructor and it can break cases where
+   * a control is extended.
+   */
+  private _assignValidators(validators: ValidatorFn|ValidatorFn[]|null): void {
+    this._rawValidators = Array.isArray(validators) ? validators.slice() : validators;
+    this._composedValidatorFn = coerceToValidator(this._rawValidators);
+  }
+
+  /**
+   * Internal implementation of the `setAsyncValidators` method. Needs to be separated out into a
+   * different method, because it is called in the constructor and it can break cases where
+   * a control is extended.
+   */
+  private _assignAsyncValidators(validators: AsyncValidatorFn|AsyncValidatorFn[]|null): void {
+    this._rawAsyncValidators = Array.isArray(validators) ? validators.slice() : validators;
+    this._composedAsyncValidatorFn = coerceToAsyncValidator(this._rawAsyncValidators);
   }
 }

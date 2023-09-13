@@ -6,11 +6,11 @@
  * found in the LICENSE file at https://angular.io/license
  */
 
-import {AST, BindingPipe, BindingType, BoundTarget, Call, DYNAMIC_TYPE, ImplicitReceiver, ParsedEventType, ParseSourceSpan, PropertyRead, PropertyWrite, SafeCall, SafePropertyRead, SchemaMetadata, ThisReceiver, TmplAstBoundAttribute, TmplAstBoundEvent, TmplAstBoundText, TmplAstElement, TmplAstIcu, TmplAstNode, TmplAstReference, TmplAstTemplate, TmplAstTextAttribute, TmplAstVariable} from '@angular/compiler';
+import {AST, BindingPipe, BindingType, BoundTarget, Call, DYNAMIC_TYPE, ImplicitReceiver, ParsedEventType, ParseSourceSpan, PropertyRead, PropertyWrite, SafeCall, SafePropertyRead, SchemaMetadata, ThisReceiver, TmplAstBoundAttribute, TmplAstBoundDeferredTrigger, TmplAstBoundEvent, TmplAstBoundText, TmplAstDeferredBlock, TmplAstElement, TmplAstForLoopBlock, TmplAstIcu, TmplAstIfBlock, TmplAstNode, TmplAstReference, TmplAstSwitchBlock, TmplAstTemplate, TmplAstTextAttribute, TmplAstVariable, TransplantedType} from '@angular/compiler';
 import ts from 'typescript';
 
 import {Reference} from '../../imports';
-import {ClassPropertyName} from '../../metadata';
+import {BindingPropertyName, ClassPropertyName} from '../../metadata';
 import {ClassDeclaration} from '../../reflection';
 import {TemplateId, TypeCheckableDirectiveMeta, TypeCheckBlockMetadata} from '../api';
 
@@ -118,7 +118,7 @@ export function generateTypeCheckBlock(
     }
   }
 
-  const paramList = [tcbThisParam(ref.node, ctxRawType.typeName, typeArguments)];
+  const paramList = [tcbThisParam(ctxRawType.typeName, typeArguments)];
 
   const scopeStatements = scope.render();
   const innerBody = ts.factory.createBlock([
@@ -131,7 +131,6 @@ export function generateTypeCheckBlock(
   const body = ts.factory.createBlock(
       [ts.factory.createIfStatement(ts.factory.createTrue(), innerBody, undefined)]);
   const fnDecl = ts.factory.createFunctionDeclaration(
-      /* decorators */ undefined,
       /* modifiers */ undefined,
       /* asteriskToken */ undefined,
       /* name */ name,
@@ -408,12 +407,12 @@ class TcbTemplateBodyOp extends TcbOp {
 }
 
 /**
- * A `TcbOp` which renders a text binding (interpolation) into the TCB.
+ * A `TcbOp` which renders an Angular expression (e.g. `{{foo() && bar.baz}}`).
  *
  * Executing this operation returns nothing.
  */
-class TcbTextInterpolationOp extends TcbOp {
-  constructor(private tcb: Context, private scope: Scope, private binding: TmplAstBoundText) {
+class TcbExpressionOp extends TcbOp {
+  constructor(private tcb: Context, private scope: Scope, private expression: AST) {
     super();
   }
 
@@ -422,7 +421,7 @@ class TcbTextInterpolationOp extends TcbOp {
   }
 
   override execute(): null {
-    const expr = tcbExpression(this.binding.value, this.tcb, this.scope);
+    const expr = tcbExpression(this.expression, this.tcb, this.scope);
     this.scope.addStatement(ts.factory.createExpressionStatement(expr));
     return null;
   }
@@ -634,35 +633,32 @@ class TcbDirectiveCtorOp extends TcbOp {
     addParseSpanInfo(id, this.node.startSourceSpan || this.node.sourceSpan);
 
     const genericInputs = new Map<string, TcbDirectiveInput>();
+    const boundAttrs = getBoundAttributes(this.dir, this.node);
 
-    const inputs = getBoundInputs(this.dir, this.node, this.tcb);
-    for (const input of inputs) {
+    for (const attr of boundAttrs) {
       // Skip text attributes if configured to do so.
       if (!this.tcb.env.config.checkTypeOfAttributes &&
-          input.attribute instanceof TmplAstTextAttribute) {
+          attr.attribute instanceof TmplAstTextAttribute) {
         continue;
       }
-      for (const fieldName of input.fieldNames) {
+      for (const {fieldName} of attr.inputs) {
         // Skip the field if an attribute has already been bound to it; we can't have a duplicate
         // key in the type constructor call.
         if (genericInputs.has(fieldName)) {
           continue;
         }
 
-        const expression = translateInput(input.attribute, this.tcb, this.scope);
-        genericInputs.set(fieldName, {
-          type: 'binding',
-          field: fieldName,
-          expression,
-          sourceSpan: input.attribute.sourceSpan
-        });
+        const expression = translateInput(attr.attribute, this.tcb, this.scope);
+        genericInputs.set(
+            fieldName,
+            {type: 'binding', field: fieldName, expression, sourceSpan: attr.attribute.sourceSpan});
       }
     }
 
     // Add unset directive inputs for each of the remaining unset fields.
-    for (const [fieldName] of this.dir.inputs) {
-      if (!genericInputs.has(fieldName)) {
-        genericInputs.set(fieldName, {type: 'unset', field: fieldName});
+    for (const {classPropertyName} of this.dir.inputs) {
+      if (!genericInputs.has(classPropertyName)) {
+        genericInputs.set(classPropertyName, {type: 'unset', field: classPropertyName});
       }
     }
 
@@ -701,28 +697,43 @@ class TcbDirectiveInputsOp extends TcbOp {
 
     // TODO(joost): report duplicate properties
 
-    const inputs = getBoundInputs(this.dir, this.node, this.tcb);
-    for (const input of inputs) {
+    const boundAttrs = getBoundAttributes(this.dir, this.node);
+    const seenRequiredInputs = new Set<ClassPropertyName>();
+
+    for (const attr of boundAttrs) {
       // For bound inputs, the property is assigned the binding expression.
-      const expr = widenBinding(translateInput(input.attribute, this.tcb, this.scope), this.tcb);
+      const expr = widenBinding(translateInput(attr.attribute, this.tcb, this.scope), this.tcb);
 
       let assignment: ts.Expression = wrapForDiagnostics(expr);
 
-      for (const fieldName of input.fieldNames) {
+      for (const {fieldName, required, transformType} of attr.inputs) {
         let target: ts.LeftHandSideExpression;
+
+        if (required) {
+          seenRequiredInputs.add(fieldName);
+        }
+
         if (this.dir.coercedInputFields.has(fieldName)) {
-          // The input has a coercion declaration which should be used instead of assigning the
-          // expression into the input field directly. To achieve this, a variable is declared
-          // with a type of `typeof Directive.ngAcceptInputType_fieldName` which is then used as
-          // target of the assignment.
-          const dirTypeRef = this.tcb.env.referenceType(this.dir.ref);
-          if (!ts.isTypeReferenceNode(dirTypeRef)) {
-            throw new Error(
-                `Expected TypeReferenceNode from reference to ${this.dir.ref.debugName}`);
+          let type: ts.TypeNode;
+
+          if (transformType) {
+            type = this.tcb.env.referenceTransplantedType(new TransplantedType(transformType));
+          } else {
+            // The input has a coercion declaration which should be used instead of assigning the
+            // expression into the input field directly. To achieve this, a variable is declared
+            // with a type of `typeof Directive.ngAcceptInputType_fieldName` which is then used as
+            // target of the assignment.
+            const dirTypeRef: ts.TypeNode = this.tcb.env.referenceType(this.dir.ref);
+
+            if (!ts.isTypeReferenceNode(dirTypeRef)) {
+              throw new Error(
+                  `Expected TypeReferenceNode from reference to ${this.dir.ref.debugName}`);
+            }
+
+            type = tsCreateTypeQueryForCoercedInput(dirTypeRef.typeName, fieldName);
           }
 
           const id = this.tcb.allocateId();
-          const type = tsCreateTypeQueryForCoercedInput(dirTypeRef.typeName, fieldName);
           this.scope.addStatement(tsDeclareVariable(id, type));
 
           target = id;
@@ -769,25 +780,42 @@ class TcbDirectiveInputsOp extends TcbOp {
                   dirId, ts.factory.createIdentifier(fieldName));
         }
 
-        if (input.attribute.keySpan !== undefined) {
-          addParseSpanInfo(target, input.attribute.keySpan);
+        if (attr.attribute.keySpan !== undefined) {
+          addParseSpanInfo(target, attr.attribute.keySpan);
         }
         // Finally the assignment is extended by assigning it into the target expression.
         assignment =
             ts.factory.createBinaryExpression(target, ts.SyntaxKind.EqualsToken, assignment);
       }
 
-      addParseSpanInfo(assignment, input.attribute.sourceSpan);
+      addParseSpanInfo(assignment, attr.attribute.sourceSpan);
       // Ignore diagnostics for text attributes if configured to do so.
       if (!this.tcb.env.config.checkTypeOfAttributes &&
-          input.attribute instanceof TmplAstTextAttribute) {
+          attr.attribute instanceof TmplAstTextAttribute) {
         markIgnoreDiagnostics(assignment);
       }
 
       this.scope.addStatement(ts.factory.createExpressionStatement(assignment));
     }
 
+    this.checkRequiredInputs(seenRequiredInputs);
+
     return null;
+  }
+
+  private checkRequiredInputs(seenRequiredInputs: Set<ClassPropertyName>): void {
+    const missing: BindingPropertyName[] = [];
+
+    for (const input of this.dir.inputs) {
+      if (input.required && !seenRequiredInputs.has(input.classPropertyName)) {
+        missing.push(input.bindingPropertyName);
+      }
+    }
+
+    if (missing.length > 0) {
+      this.tcb.oobRecorder.missingRequiredInputs(
+          this.tcb.id, this.node, this.dir.name, this.dir.isComponent, missing);
+    }
   }
 }
 
@@ -1462,9 +1490,7 @@ class Scope {
       this.elementOpMap.set(node, opIndex);
       this.appendDirectivesAndInputsOfNode(node);
       this.appendOutputsOfNode(node);
-      for (const child of node.children) {
-        this.appendNode(child);
-      }
+      this.appendChildren(node);
       this.checkAndAppendReferencesOfNode(node);
     } else if (node instanceof TmplAstTemplate) {
       // Template children are rendered in a child scope.
@@ -1478,10 +1504,39 @@ class Scope {
         this.appendDeepSchemaChecks(node.children);
       }
       this.checkAndAppendReferencesOfNode(node);
+    } else if (node instanceof TmplAstDeferredBlock) {
+      node.triggers.when !== undefined &&
+          this.opQueue.push(new TcbExpressionOp(this.tcb, this, node.triggers.when.value));
+      node.prefetchTriggers.when !== undefined &&
+          this.opQueue.push(new TcbExpressionOp(this.tcb, this, node.prefetchTriggers.when.value));
+      this.appendChildren(node);
+      node.placeholder !== null && this.appendChildren(node.placeholder);
+      node.loading !== null && this.appendChildren(node.loading);
+      node.error !== null && this.appendChildren(node.error);
+    } else if (node instanceof TmplAstIfBlock) {
+      // TODO(crisbeto): type check the branch expression.
+      for (const branch of node.branches) {
+        this.appendChildren(branch);
+      }
+    } else if (node instanceof TmplAstSwitchBlock) {
+      // TODO(crisbeto): type check switch condition
+      for (const currentCase of node.cases) {
+        this.appendChildren(currentCase);
+      }
+    } else if (node instanceof TmplAstForLoopBlock) {
+      // TODO(crisbeto): type check loop expression, context variables and trackBy
+      this.appendChildren(node);
+      node.empty && this.appendChildren(node.empty);
     } else if (node instanceof TmplAstBoundText) {
-      this.opQueue.push(new TcbTextInterpolationOp(this.tcb, this, node));
+      this.opQueue.push(new TcbExpressionOp(this.tcb, this, node.value));
     } else if (node instanceof TmplAstIcu) {
       this.appendIcuExpressions(node);
+    }
+  }
+
+  private appendChildren(node: TmplAstNode&{children: TmplAstNode[]}) {
+    for (const child of node.children) {
+      this.appendNode(child);
     }
   }
 
@@ -1632,19 +1687,19 @@ class Scope {
 
   private appendIcuExpressions(node: TmplAstIcu): void {
     for (const variable of Object.values(node.vars)) {
-      this.opQueue.push(new TcbTextInterpolationOp(this.tcb, this, variable));
+      this.opQueue.push(new TcbExpressionOp(this.tcb, this, variable.value));
     }
     for (const placeholder of Object.values(node.placeholders)) {
       if (placeholder instanceof TmplAstBoundText) {
-        this.opQueue.push(new TcbTextInterpolationOp(this.tcb, this, placeholder));
+        this.opQueue.push(new TcbExpressionOp(this.tcb, this, placeholder.value));
       }
     }
   }
 }
 
-interface TcbBoundInput {
+interface TcbBoundAttribute {
   attribute: TmplAstBoundAttribute|TmplAstTextAttribute;
-  fieldNames: ClassPropertyName[];
+  inputs: {fieldName: ClassPropertyName, required: boolean, transformType: ts.TypeNode|null}[];
 }
 
 /**
@@ -1652,16 +1707,13 @@ interface TcbBoundInput {
  * arguments.
  */
 function tcbThisParam(
-    node: ClassDeclaration<ts.ClassDeclaration>, name: ts.EntityName,
-    typeArguments: ts.TypeNode[]|undefined): ts.ParameterDeclaration {
-  const type = ts.factory.createTypeReferenceNode(name, typeArguments);
+    name: ts.EntityName, typeArguments: ts.TypeNode[]|undefined): ts.ParameterDeclaration {
   return ts.factory.createParameterDeclaration(
-      /* decorators */ undefined,
       /* modifiers */ undefined,
       /* dotDotDotToken */ undefined,
       /* name */ 'this',
       /* questionToken */ undefined,
-      /* type */ type,
+      /* type */ ts.factory.createTypeReferenceNode(name, typeArguments),
       /* initializer */ undefined);
 }
 
@@ -1840,10 +1892,10 @@ function tcbCallTypeCtor(
       /* argumentsArray */[ts.factory.createObjectLiteralExpression(members)]);
 }
 
-function getBoundInputs(
-    directive: TypeCheckableDirectiveMeta, node: TmplAstTemplate|TmplAstElement,
-    tcb: Context): TcbBoundInput[] {
-  const boundInputs: TcbBoundInput[] = [];
+function getBoundAttributes(
+    directive: TypeCheckableDirectiveMeta,
+    node: TmplAstTemplate|TmplAstElement): TcbBoundAttribute[] {
+  const boundInputs: TcbBoundAttribute[] = [];
 
   const processAttribute = (attr: TmplAstBoundAttribute|TmplAstTextAttribute) => {
     // Skip non-property bindings.
@@ -1853,11 +1905,17 @@ function getBoundInputs(
 
     // Skip the attribute if the directive does not have an input for it.
     const inputs = directive.inputs.getByBindingPropertyName(attr.name);
-    if (inputs === null) {
-      return;
+
+    if (inputs !== null) {
+      boundInputs.push({
+        attribute: attr,
+        inputs: inputs.map(input => ({
+                             fieldName: input.classPropertyName,
+                             required: input.required,
+                             transformType: input.transform?.type || null
+                           }))
+      });
     }
-    const fieldNames = inputs.map(input => input.classPropertyName);
-    boundInputs.push({attribute: attr, fieldNames});
   };
 
   node.inputs.forEach(processAttribute);
@@ -1990,7 +2048,6 @@ function tcbCreateEventHandler(
   }
 
   const eventParam = ts.factory.createParameterDeclaration(
-      /* decorators */ undefined,
       /* modifiers */ undefined,
       /* dotDotDotToken */ undefined,
       /* name */ EVENT_PARAMETER,

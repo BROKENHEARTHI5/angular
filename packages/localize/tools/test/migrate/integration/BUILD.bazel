@@ -28,13 +28,13 @@ copy_to_bin(
 
 jasmine_node_test(
     name = "integration",
-    bootstrap = ["//tools/testing:node_no_angular_es2015"],
+    bootstrap = ["//tools/testing:node_no_angular"],
     data = [
         ":test_files",
     ],
     deps = [
         ":test_lib",
-        "@npm//glob",
+        "@npm//fast-glob",
         "@npm//yargs",
     ],
 )

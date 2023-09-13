@@ -2,51 +2,54 @@
 
 The `NgOptimizedImage` directive makes it easy to adopt performance best practices for loading images.
 
-The directive ensures that the loading of the [Largest Contentful Paint](http://web.dev/lcp) image is prioritized by:
+The directive ensures that the loading of the [Largest Contentful Paint (LCP)](http://web.dev/lcp) image is prioritized by:
 
 *   Automatically setting the `fetchpriority` attribute on the `<img>` tag
 *   Lazy loading other images by default
 *   Asserting that there is a corresponding preconnect link tag in the document head
+*   Automatically generating a `srcset` attribute
 *   Generating a [preload hint](https://developer.mozilla.org/en-US/docs/Web/HTML/Link_types/preload) if app is using SSR
 
-In addition to optimizing the loading of the LCP image, `NgOptimizedImage` enforces a number of image best practices:
+In addition to optimizing the loading of the LCP image, `NgOptimizedImage` enforces a number of image best practices, such as:
 
-*   Uses [image CDN URLs to apply image optimizations](https://web.dev/image-cdns/#how-image-cdns-use-urls-to-indicate-optimization-options)
-*   Prevents layout shift by requiring `width` and `height`
-*   Warns if `width` or `height` have been set incorrectly
-*   Warns if the image will be visually distorted when rendered
+*   Using [image CDN URLs to apply image optimizations](https://web.dev/image-cdns/#how-image-cdns-use-urls-to-indicate-optimization-options)
+*   Preventing layout shift by requiring `width` and `height`
+*   Warning if `width` or `height` have been set incorrectly
+*   Warning if the image will be visually distorted when rendered
 
-## Prerequisites
+**Note: Although the `NgOptimizedImage` directive was made a stable feature in Angular version 15, it has been backported and is available as a stable feature in versions 13.4.0 and 14.3.0 as well. **
 
-1. You will need to import `NgOptimizedImage` from the `@angular/common` module into your application. The directive is defined as a [standalone directive](/guide/standalone-components), so components should import it directly.
-2. Consider setting up an image loader. These steps are explained in the [Configuring an Image Loader](#configuring-an-image-loader-for-ngoptimizedimage) section.
+## Getting Started
 
-## Usage in a template
+#### Step 1: Import NgOptimizedImage
 
-### Overview
+<code-example format="typescript" language="typescript">
+
+import { NgOptimizedImage } from '@angular/common'
+
+</code-example>
+
+The directive is defined as a [standalone directive](/guide/standalone-components), so components should import it directly.
+
+#### Step 2: (Optional) Set up a Loader
+
+An image loader is not **required** in order to use NgOptimizedImage, but using one with an image CDN enables powerful performance features, including automatic `srcset`s for your images.
+
+A brief guide for setting up a loader can be found in the [Configuring an Image Loader](#configuring-an-image-loader-for-ngoptimizedimage) section at the end of this page.
+
+#### Step 3: Enable the directive
 
 To activate the `NgOptimizedImage` directive, replace your image's `src` attribute with `ngSrc`.
 
 <code-example format="typescript" language="typescript">
 
-&lt;img ngSrc="cat.jpg" width="400" height="200"&gt;
+&lt;img ngSrc="cat.jpg"&gt;
 
 </code-example>
 
 If you're using a [built-in third-party loader](#built-in-loaders), make sure to omit the base URL path from `src`, as that will be prepended automatically by the loader.
 
-### Preventing layout shift
-
-To prevent [image-related layout shifts](https://web.dev/css-web-vitals/#images-and-layout-shifts), the directive enforces that you set the `width` and `height` attributes for each image.  
-
-* For responsive images, the `width` and `height` attributes should reflect
-the [intrinsic size](https://developer.mozilla.org/en-US/docs/Glossary/Intrinsic_Size) of the image. 
-
-* For fixed size images, the `width` and `height` attributes should reflect the desired rendered size of the image. The aspect ratio of these attributes should always match the intrinsic aspect ratio of the image.
-
-Note: if you don't know the size of your images, consider using "fill mode" to inherit the size of the parent container (see below).
-
-### Marking images as `priority`
+#### Step 4: Mark images as `priority`
 
 Always mark the [LCP image](https://web.dev/lcp/#what-elements-are-considered) on your page as `priority` to prioritize its loading.
 
@@ -60,10 +63,59 @@ Marking an image as `priority` applies the following optimizations:
 
 *   Sets `fetchpriority=high` (read more about priority hints [here](https://web.dev/priority-hints))
 *   Sets `loading=eager` (read more about native lazy loading [here](https://web.dev/browser-level-image-lazy-loading))
+*   Automatically generates a [preload link element](https://developer.mozilla.org/en-US/docs/Web/HTML/Link_types/preload) if [rendering on the server](/guide/universal).
 
 Angular displays a warning during development if the LCP element is an image that does not have the `priority` attribute. A page’s LCP element can vary based on a number of factors - such as the dimensions of a user's screen, so a page may have multiple images that should be marked `priority`. See [CSS for Web Vitals](https://web.dev/css-web-vitals/#images-and-largest-contentful-paint-lcp) for more details.
 
-### Adding resource hints
+#### Step 5: Include Height and Width
+
+In order to prevent [image-related layout shifts](https://web.dev/css-web-vitals/#images-and-layout-shifts), NgOptimizedImage requires that you specify a height and width for your image, as follows:
+
+<code-example format="typescript" language="typescript">
+
+&lt;img ngSrc="cat.jpg" width="400" height="200"&gt;
+
+</code-example>
+
+For **responsive images** (images which you've styled to grow and shrink relative to the viewport), the `width` and `height` attributes should be the instrinsic size of the image file. For responsive images it's also important to [set a value for `sizes`.](#responsive-images)
+
+For **fixed size images**, the `width` and `height` attributes should reflect the desired rendered size of the image. The aspect ratio of these attributes should always match the intrinsic aspect ratio of the image.
+
+Note: If you don't know the size of your images, consider using "fill mode" to inherit the size of the parent container, as described below:
+
+### Using `fill` mode
+
+In cases where you want to have an image fill a containing element, you can use the `fill` attribute. This is often useful when you want to achieve a "background image" behavior. It can also be helpful when you don't know the exact width and height of your image, but you do have a parent container with a known size that you'd like to fit your image into (see "object-fit" below).
+
+When you add the `fill` attribute to your image, you do not need and should not include a `width` and `height`, as in this example:
+
+<code-example format="typescript" language="typescript">
+
+&lt;img ngSrc="cat.jpg" fill&gt;
+
+</code-example>
+
+You can use the [object-fit](https://developer.mozilla.org/en-US/docs/Web/CSS/object-fit) CSS property to change how the image will fill its container. If you style your image with `object-fit: "contain"`, the image will maintain its aspect ratio and be "letterboxed" to fit the element. If you set `object-fit: "cover"`, the element will retain its aspect ratio, fully fill the element, and some content may be "cropped" off. 
+
+See visual examples of the above at the [MDN object-fit documentation.](https://developer.mozilla.org/en-US/docs/Web/CSS/object-fit)
+
+You can also style your image with the [object-position property](https://developer.mozilla.org/en-US/docs/Web/CSS/object-position) to adjust its position within its containing element.
+
+**Important note:** For the "fill" image to render properly, its parent element **must** be styled with `position: "relative"`, `position: "fixed"`, or `position: "absolute"`. 
+
+### Adjusting image styling
+
+Depending on the image's styling, adding `width` and `height` attributes may cause the image to render differently. `NgOptimizedImage` warns you if your image styling renders the image at a distorted aspect ratio.
+
+You can typically fix this by adding `height: auto` or `width: auto` to your image styles. For more information, see the [web.dev article on the `<img>` tag](https://web.dev/patterns/web-vitals-patterns/images/img-tag).
+
+If the `height` and `width` attribute on the image are preventing you from sizing the image the way you want with CSS, consider using "fill" mode instead, and styling the image's parent element.
+
+## Performance Features
+
+NgOptimizedImage includes a number of features designed to improve loading performance in your app. These features are described in this section.
+
+### Add resource hints
 
 You can add a [`preconnect` resource hint](https://web.dev/preconnect-and-dns-prefetch) for your image origin to ensure that the LCP image loads as quickly as possible. Always put resource hints in the `<head>` of the document.
 
@@ -85,25 +137,7 @@ providers: [
 
 </code-example>
 
-### Using `fill` mode
-
-In cases where you want to have an image fill a containing element, you can use the `fill` attribute. This is often useful when you want to achieve a "background image" behavior, or when you don't know the exact width and height of your image.
-
-When you add the `fill` attribute to your image, you do not need and should not include a `width` and `height`, as in this example:
-
-<code-example format="typescript" language="typescript">
-
-&lt;img ngSrc="cat.jpg" fill&gt;
-
-</code-example> 
-
-### Adjusting image styling
-
-Depending on the image's styling, adding `width` and `height` attributes may cause the image to render differently. `NgOptimizedImage` warns you if your image styling renders the image at a distorted aspect ratio.
-
-You can typically fix this by adding `height: auto` or `width: auto` to your image styles. For more information, see the [web.dev article on the `<img>` tag](https://web.dev/patterns/web-vitals-patterns/images/img-tag).
-
-### Requesting images at the correct size
+### Request images at the correct size with automatic `srcset`
 
 Defining a [`srcset` attribute](https://developer.mozilla.org/en-US/docs/Web/API/HTMLImageElement/srcset) ensures that the browser requests an image at the right size for your user's viewport, so it doesn't waste time downloading an image that's too large. `NgOptimizedImage` generates an appropriate `srcset` for the image, based on the presence and value of the [`sizes` attribute](https://developer.mozilla.org/en-US/docs/Web/API/HTMLImageElement/sizes) on the image tag.
 
@@ -186,7 +220,7 @@ You may want to have images displayed at varying widths on differently-sized scr
 
 The `sizes` attribute in the above example says "I expect this image to be 100 percent of the screen width on devices under 768px wide. Otherwise, I expect it to be 50 percent of the screen width.
 
-For additional information about the `sizes` attribute, see [web.dev](https://web.dev/learn/design/responsive-images/#sizes) or [mdn](https://developer.mozilla.org/en-US/docs/Web/API/HTMLImageElement/sizes).
+For additional information about the `sizes` attribute, see [web.dev](https://web.dev/learn/design/responsive-images/#sizes) or [MDN](https://developer.mozilla.org/en-US/docs/Web/API/HTMLImageElement/sizes).
 
 ## Configuring an image loader for `NgOptimizedImage`
 
@@ -244,9 +278,64 @@ providers: [
 ],
 </code-example>
 
-A loader function for the `NgOptimizedImage` directive takes an object with the `ImageLoaderConfig` type (from `@angular/common`) as its argument and returns the absolute URL of the image asset. The `ImageLoaderConfig` object contains the `src` and `width` properties.
+A loader function for the `NgOptimizedImage` directive takes an object with the `ImageLoaderConfig` type (from `@angular/common`) as its argument and returns the absolute URL of the image asset. The `ImageLoaderConfig` object contains the `src` property, and optional `width` and `loaderParams` properties.
 
-Note: a custom loader must support requesting images at various widths in order for `ngSrcset` to work properly.
+Note: even though the `width` property may not always be present, a custom loader must use it to support requesting images at various widths in order for `ngSrcset` to work properly.
+
+### The `loaderParams` Property
+
+There is an additional attribute supported by the `NgOptimizedImage` directive, called `loaderParams`, which is specifically designed to support the use of custom loaders. The `loaderParams` attribute take an object with any properties as a value, and does not do anything on its own. The data in `loaderParams` is added to the `ImageLoaderConfig` object passed to your custom loader, and can be used to control the behavior of the loader.
+
+A common use for `loaderParams` is controlling advanced image CDN features.
+
+### Example custom loader
+
+The following shows an example of a custom loader function. This example function concatenates `src` and `width`, and uses `loaderParams` to control a custom CDN feature for rounded corners:
+
+<code-example format="typescript" language="typescript">
+const myCustomLoader = (config: ImageLoaderConfig) => {
+  let url = `https://example.com/images/${config.src}?`;
+  let queryParams = [];
+  if (config.width) {
+    queryParams.push(`w=${config.width}`);
+  }
+  if (config.loaderParams?.roundedCorners) {
+    queryParams.push('mask=corners&corner-radius=5');
+  }
+  return url + queryParams.join('&');
+};
+</code-example>
+
+Note that in the above example, we've invented the 'roundedCorners' property name to control a feature of our custom loader. We could then use this feature when creating an image, as follows:
+
+<code-example format="html" language="html">
+
+&lt;img ngSrc="profile.jpg" width="300" height="300" [loaderParams]="{roundedCorners: true}"&gt;
+
+</code-example>
+
+## Frequently Asked Questions
+
+### Does NgOptimizedImage support the `background-image` css property?
+The NgOptimizedImage does not directly support the `background-image` css property, but it is designed to easily accommodate the use case of having an image as the background of another element.
+
+Here's a simple step-by-step process for migrating from `background-image` to `NgOptimizedImage`. For these steps, we'll refer to the element that has an image background as the "containing element":
+
+1) Remove the `background-image` style from the containing element.
+2) Ensure that the containing element has `position: "relative"`, `position: "fixed"`, or `position: "absolute"`.
+3) Create a new image element as a child of the containing element, using `ngSrc` to enable the `NgOptimizedImage` directive.
+4) Give that element the `fill` attribute. Do not include a `height` and `width`.
+5) If you believe this image might be your [LCP element](https://web.dev/lcp/), add the `priority` attribute to the image element.
+
+You can adjust how the background image fills the container as described in the [Using fill mode](#using-fill-mode) section.
+
+### Why can't I use `src` with `NgOptimizedImage`?
+The `ngSrc` attribute was chosen as the trigger for NgOptimizedImage due to technical considerations around how images are loaded by the browser. NgOptimizedImage makes programmatic changes to the `loading` attribute--if the browser sees the `src` attribute before those changes are made, it will begin eagerly downloading the image file, and the loading changes will be ignored. 
+
+### Can I use two different image domains in the same page?
+The [image loaders](#configuring-an-image-loader-for-ngoptimizedimage) provider pattern is designed to be as simple as possible for the common use case of having only a single image CDN used within a component. However, it's still very possible to manage multiple image CDNs using a single provider.
+
+To do this, we recommend writing a [custom image loader](#custom-loaders) which uses the [`loaderParams` property](#the-loaderparams-property) to pass a flag that specifies which image CDN should be used, and then invokes the appropriate loader based on that flag.
 
 <!-- links -->
 
@@ -254,4 +343,4 @@ Note: a custom loader must support requesting images at various widths in order 
 
 <!--end links -->
 
-@reviewed 2022-11-07
+@reviewed 2023-07-18

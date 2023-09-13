@@ -486,8 +486,9 @@ describe('FormGroup', () => {
          () => {
            const logEvent = () => logger.push('valueChanges event');
 
-           const [formArrayControl1, formArrayControl2] = (g2.controls.array as FormArray).controls;
-           const formGroupControl = (g2.controls.group as FormGroup).controls.one;
+           const [formArrayControl1, formArrayControl2] =
+               (g2.controls['array'] as FormArray).controls;
+           const formGroupControl = (g2.controls['group'] as FormGroup).controls['one'];
 
            formArrayControl1.valueChanges.subscribe(logEvent);
            formArrayControl2.valueChanges.subscribe(logEvent);
@@ -816,7 +817,7 @@ describe('FormGroup', () => {
     let group: FormGroup;
 
     beforeEach(waitForAsync(() => {
-      control = new FormControl('', asyncValidatorReturningObservable);
+      control = new FormControl('', null, asyncValidatorReturningObservable);
       group = new FormGroup({'one': control});
     }));
 
@@ -836,20 +837,14 @@ describe('FormGroup', () => {
          expect(statuses).toEqual(['VALID']);
        }));
 
-    // TODO(kara): update these tests to use fake Async
-    it('should fire a statusChange if child has async validation change', done => {
-      const loggedValues: string[] = [];
-      group.statusChanges.subscribe({
-        next: (status: string) => {
-          loggedValues.push(status);
-          if (loggedValues.length === 2) {
-            expect(loggedValues).toEqual(['PENDING', 'INVALID']);
-          }
-          done();
-        }
-      });
-      control.setValue('');
-    });
+    it('should fire a statusChange if child has async validation change', fakeAsync(() => {
+         const loggedValues: string[] = [];
+         group.statusChanges.subscribe((status) => loggedValues.push(status));
+
+         control.setValue('');
+         tick();
+         expect(loggedValues).toEqual(['PENDING', 'INVALID']);
+       }));
   });
 
   describe('getError', () => {
